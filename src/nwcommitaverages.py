@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from subprocess import CompletedProcess
 from tabulate import tabulate
-from typing import Callable
+from typing import Callable, Optional
 
 # LOCAL MODULES
 # CONSTANTS
@@ -56,7 +56,7 @@ class Summary():
     daily_logging_function : Callable[[], None]
     monthly_logging_function : Callable[[], None]    
     table_logging_function : Callable[[], None]
-class CommitAvgCalculator():
+class CommitAverageCalculator():
     
     '''Calculates custom averages related to the current git repository.'''
 
@@ -318,35 +318,43 @@ class CommitAvgCalculator():
 
         for item in items :
             print(item)
-    
-    def create_summary(self) -> Summary:
+
+    def create_summary(self) -> Optional[Summary]:
 
         '''Creates a Summary.'''
 
-        commit_items : list[CommitItem] = self.__get_commit_items()
-        commit_items = self.__clean_commit_items(commit_items = commit_items)
+        try:
 
-        daily_statuses : list[DailyStatus] = self.__create_daily_statuses(commit_items = commit_items)
-        monthly_statuses : list[MonthlyStatus] = self.__create_monthly_statuses(daily_statuses = daily_statuses)
+            commit_items : list[CommitItem] = self.__get_commit_items()
+            commit_items = self.__clean_commit_items(commit_items = commit_items)
 
-        daily_logging_function : Callable[[], None] = lambda : self.__log_items(items = daily_statuses)
-        monthly_logging_function : Callable[[], None] = lambda : self.__log_items(items = daily_statuses)
-        table_logging_function : Callable[[], None] = lambda : self.__log_table(monthly_statuses = monthly_statuses)  
+            daily_statuses : list[DailyStatus] = self.__create_daily_statuses(commit_items = commit_items)
+            monthly_statuses : list[MonthlyStatus] = self.__create_monthly_statuses(daily_statuses = daily_statuses)
+
+            daily_logging_function : Callable[[], None] = lambda : self.__log_items(items = daily_statuses)
+            monthly_logging_function : Callable[[], None] = lambda : self.__log_items(items = daily_statuses)
+            table_logging_function : Callable[[], None] = lambda : self.__log_table(monthly_statuses = monthly_statuses)  
+            
+            summary : Summary = Summary(
+                commit_items = commit_items,
+                daily_statuses = daily_statuses,
+                monthly_statuses = monthly_statuses,
+                daily_logging_function = daily_logging_function,
+                monthly_logging_function = monthly_logging_function,
+                table_logging_function = table_logging_function
+            )
+
+            return summary
         
-        summary : Summary = Summary(
-            commit_items = commit_items,
-            daily_statuses = daily_statuses,
-            monthly_statuses = monthly_statuses,
-            daily_logging_function = daily_logging_function,
-            monthly_logging_function = monthly_logging_function,
-            table_logging_function = table_logging_function
-        )
+        except Exception as e:
 
-        return summary
+            self.__logging_function(str(e))
+            return None
 
 # MAIN
 if __name__ == "__main__":
     
-    ca_calculator = CommitAvgCalculator()
-    summary : Summary = ca_calculator.create_summary()
-    summary.table_logging_function()
+    summary : Optional[Summary] = CommitAverageCalculator().create_summary()
+
+    if summary:
+        summary.table_logging_function()
