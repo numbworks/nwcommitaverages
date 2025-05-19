@@ -84,6 +84,33 @@ class APFactoryTestCase(unittest.TestCase):
         self.assertIn("-fp", arguments)
         self.assertIn("--logtype", arguments)
         self.assertIn("-lt", arguments)
+class APAdapterTestCase(unittest.TestCase):
+
+    @parameterized.expand([
+        ("/workspaces/nwsomething", LOGTYPE.DAILY, ("/workspaces/nwsomething", LOGTYPE.DAILY)),
+        ("/workspaces/nwsomething", None, ("/workspaces/nwsomething", None)),
+        (None, None, (None, None))
+    ])
+    def test_parseargs_shouldreturnexpectedtuple_wheninvoked(
+        self,
+        file_path : Optional[str],
+        logtype : Optional[LOGTYPE],
+        expected : Tuple[Optional[str], Optional[LOGTYPE]]
+    ) -> None:
+
+        # Arrange
+        argument_parser : Mock = Mock(spec = ArgumentParser)
+        argument_parser.parse_args.return_value = Namespace(file_path = file_path, logtype = logtype)
+
+        ap_factory : Mock = Mock()
+        ap_factory.create.return_value = argument_parser
+
+        # Act
+        ap_adapter : APAdapter = APAdapter(ap_factory = ap_factory)
+        actual : Tuple[Optional[str], Optional[LOGTYPE]] = ap_adapter.parse_args()
+
+        # Assert
+        self.assertEqual(expected, actual)
 
 # MAIN
 if __name__ == "__main__":
