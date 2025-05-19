@@ -68,6 +68,8 @@ class CommitAvgCalculator():
 
     def __create_timestamp_dt(self, timestamp_int : int) -> datetime:
 
+        '''Converts an integer timestamp to datetime.'''
+
         dt : datetime = datetime.fromtimestamp(int(timestamp_int), tz = timezone.utc)
 
         return dt
@@ -145,7 +147,6 @@ class CommitAvgCalculator():
         '''Extracts the avg_minutes from daily_statuses.'''
         
         return [status.avg_minutes for status in daily_statuses]
-
     def __get_commit_items(self) -> list[CommitItem]:
 
         '''
