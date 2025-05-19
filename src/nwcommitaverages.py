@@ -1,6 +1,10 @@
-'''A script to calculate some custom averages related to the current git repository.'''
+'''
+A CLI application designed to calculate the average time between git commits.
 
-# IMPORTS
+Alias: nwca
+'''
+
+# GLOBAL MODULES
 import subprocess
 from collections import defaultdict
 from dataclasses import dataclass
@@ -9,6 +13,9 @@ from subprocess import CompletedProcess
 from tabulate import tabulate
 from typing import Callable
 
+# LOCAL MODULES
+# CONSTANTS
+# STATIC CLASSES
 # CLASSES
 @dataclass(frozen = True)
 class CommitItem():
