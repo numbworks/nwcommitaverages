@@ -5,6 +5,7 @@ Alias: nwca
 '''
 
 # GLOBAL MODULES
+from argparse import ArgumentParser, Namespace
 import subprocess
 from collections import defaultdict
 from dataclasses import dataclass
@@ -12,7 +13,7 @@ from datetime import datetime, timezone
 from enum import StrEnum, auto
 from subprocess import CompletedProcess
 from tabulate import tabulate
-from typing import Callable, Literal, Optional
+from typing import Callable, Literal, Optional, Tuple, cast
 
 # LOCAL MODULES
 # CONSTANTS
@@ -32,6 +33,16 @@ class _MessageCollection():
     @staticmethod
     def provided_log_type_not_supported(log_type : LOGTYPE) -> str:
         return f"The provided 'log_type' is not supported ('{log_type}')."
+
+    @staticmethod
+    def parser_description() -> str:
+        return "Checks if all methods in a Python file have docstrings."
+    @staticmethod
+    def parser_file_path() -> str:
+        return "The file path to the Python file to check docstrings for."
+    @staticmethod
+    def parser_logtype() -> str:
+        return f"The type of log ('{LOGTYPE.TABLE}' for a tabular overview, '{LOGTYPE.DAILY}' and '{LOGTYPE.MONTHLY}' for a list of statuses). The default is '{LOGTYPE.TABLE}'."
 
 # CLASSES
 @dataclass(frozen = True)
@@ -348,11 +359,11 @@ class CommitAverageCalculator():
 
         for item in items :
             self.__logging_function(item)
-    def __orchestrate_logging(self, summary : Summary, log_type : Literal[LOGTYPE.TABLE, LOGTYPE.DAILY, LOGTYPE.MONTHLY]) -> None:
+    def __orchestrate_logging(self, summary : Summary, log_type : Optional[Literal[LOGTYPE.TABLE, LOGTYPE.DAILY, LOGTYPE.MONTHLY]]) -> None:
 
         '''Orchestrate summary logging according to log_type.'''
 
-        if log_type == LOGTYPE.TABLE:
+        if log_type is None or log_type== LOGTYPE.TABLE:
             summary.table_logging_function()
 
         elif log_type == LOGTYPE.DAILY:
@@ -364,7 +375,7 @@ class CommitAverageCalculator():
         else:
             raise Exception(_MessageCollection.provided_log_type_not_supported(log_type = log_type))
 
-    def run(self, file_path: Optional[str]) -> Summary:
+    def run(self, file_path: Optional[str] = None) -> Summary:
 
         '''Returns a Summary or raises an Exception.'''
 
@@ -391,7 +402,7 @@ class CommitAverageCalculator():
     def run_and_log(
         self, 
         file_path: Optional[str] = None, 
-        log_type : Literal[LOGTYPE.TABLE, LOGTYPE.DAILY, LOGTYPE.MONTHLY] = LOGTYPE.TABLE) -> None:
+        log_type : Optional[Literal[LOGTYPE.TABLE, LOGTYPE.DAILY, LOGTYPE.MONTHLY]] = None) -> None:
 
         '''Logs the outcome of the calculation or the Exception message.'''
 
@@ -403,7 +414,58 @@ class CommitAverageCalculator():
         except Exception as e:
 
             self.__logging_function(str(e))
+class APFactory():
+
+    '''Encapsulates all the logic related to the creation of a custom instance of argparse.ArgumentParser.'''
+
+    def create(self) -> ArgumentParser:
+
+        '''Creates a custom instance of argparse.ArgumentParser.'''
+
+        argument_parser : ArgumentParser = ArgumentParser(description = _MessageCollection.parser_description())
+        argument_parser.add_argument("--file_path", "-fp", required = False, help = _MessageCollection.parser_file_path())
+        argument_parser.add_argument("--logtype", "-lt", required = False, choices = [f"{LOGTYPE.TABLE}", f"{LOGTYPE.DAILY}", f"{LOGTYPE.MONTHLY}"], help = _MessageCollection.parser_logtype())
+
+        return argument_parser
+class APAdapter():
+
+    '''Customizes argparse.ArgumentParser for this use case.'''
+
+    __ap_factory : APFactory
+
+    def __init__(self, ap_factory : APFactory = APFactory()) -> None:
+        self.__ap_factory = ap_factory
+
+    def parse_args(self) -> Tuple[Optional[str], Optional[Literal[LOGTYPE.TABLE, LOGTYPE.DAILY, LOGTYPE.MONTHLY]]]:
+
+        '''Parses provided arguments.'''
+
+        parser : ArgumentParser = self.__ap_factory.create()
+        args : Namespace = parser.parse_args()
+
+        return (args.file_path, args.logtype)
+class CLIManager():
+
+    '''Collects all the logic related to the CLI management.'''
+
+    __ap_adapter : APAdapter
+    __ca_calculator : CommitAverageCalculator
+
+    def __init__(
+        self, 
+        ap_adapter : APAdapter = APAdapter(), 
+        ca_calculator : CommitAverageCalculator = CommitAverageCalculator()) -> None:
+
+        self.__ap_adapter = ap_adapter
+        self.__ca_calculator = ca_calculator
+
+    def run_and_log(self) -> None:
+
+        '''Runs the commit average calculation and logs the outcome.'''
+
+        file_path, log_type = self.__ap_adapter.parse_args()
+        self.__ca_calculator.run_and_log(file_path = file_path, log_type = log_type)
 
 # MAIN
 if __name__ == "__main__":
-    CommitAverageCalculator().run_and_log()
+    CLIManager().run_and_log()
