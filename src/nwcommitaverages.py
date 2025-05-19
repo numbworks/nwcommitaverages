@@ -13,23 +13,35 @@ from datetime import datetime, timezone
 from enum import StrEnum, auto
 from subprocess import CompletedProcess
 from tabulate import tabulate
-from typing import Callable, Literal, Optional, Tuple, cast
+from typing import Callable, Literal, Optional, Tuple
 
 # LOCAL MODULES
 # CONSTANTS
 class LOGTYPE(StrEnum):
 
-    '''Represents a collection of options.'''
+    '''Represents a collection of log types.'''
 
     TABLE = auto()
     DAILY = auto()
     MONTHLY = auto()
-    
+class HEADER(StrEnum):
+
+    '''Represents a collection of headers.'''
+
+    YEARMONTH = "YearMonth"
+    DAYS = "Days"
+    COMMITS = "Commits"
+    DAILYAVGMIN = "DailyAvgMin"
+    REFNAMES = "RefNames"
+
 # STATIC CLASSES
 class _MessageCollection():
 
     '''Collects all the messages used for logging and for the exceptions.'''
 
+    @staticmethod
+    def not_enough_data() -> str:
+        return "Not enough data"
     @staticmethod
     def provided_log_type_not_supported(log_type : LOGTYPE) -> str:
         return f"The provided 'log_type' is not supported ('{log_type}')."
@@ -337,12 +349,12 @@ class CommitAverageCalculator():
                 str(f"{monthly_status.avg_minutes:.2f}"),
                 ", ".join(monthly_status.ref_names)
             ]
-            row[3] = str(row[3]).replace("0.00", "Not enough data")
+            row[3] = str(row[3]).replace("0.00", _MessageCollection.not_enough_data())
             rows.append(row)
 
         table : str = tabulate(
             rows, 
-            headers = ["YearMonth", "Days", "Commits", "DailyAvgMin", "RefNames"], 
+            headers = [HEADER.YEARMONTH, HEADER.DAYS, HEADER.COMMITS, HEADER.DAILYAVGMIN, HEADER.REFNAMES], 
             tablefmt = "grid", 
             disable_numparse = True
         )
