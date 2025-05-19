@@ -147,7 +147,7 @@ class CommitAverageCalculator():
         '''Extracts the avg_minutes from daily_statuses.'''
         
         return [status.avg_minutes for status in daily_statuses]
-    def __get_commit_items(self) -> list[CommitItem]:
+    def __get_commit_items(self, file_path: Optional[str]) -> list[CommitItem]:
 
         '''
             Retrieve a collection of CommitItem objects out of the git log.
@@ -157,10 +157,18 @@ class CommitAverageCalculator():
                 2023-08-21;1692636918;origin/v4.6.0
                 2023-08-21;1692637081;HEAD -> master, origin/master, origin/HEAD
                 ...
+
+            If "file_path" is None, "git log" is run against the current folder.
+            Otherwise, it's run against the provided folder ("git -C file_path log").
         '''
 
+        git_command : list[str] = ["git", "log", "--pretty=format:%cs;%ct;%D", "--reverse"]
+
+        if file_path:
+            git_command = ["git", "-C", file_path, "log", "--pretty=format:%cs;%ct;%D", "--reverse"]
+
         output : CompletedProcess = subprocess.run(
-            ["git", "log", "--pretty=format:%cs;%ct;%D", "--reverse"],
+            git_command,
             capture_output = True,
             text = True,
             check = True
@@ -314,47 +322,54 @@ class CommitAverageCalculator():
         self.__logging_function(table)
     def __log_items(self, items : list) -> None:
 
-        '''Logs each item of the given list on its own line.'''
+        '''
+            Logs each item of the given list on its own line - i.e.:
+        
+                - DailyStatus(date_str='2025-05-19', timestamps=[1747679247, 1747679425, 1747679655, 1747680456], avg_minutes=6.72, ref_names=[])
+                - MonthlyStatus(year_month='2025-05', dates=1, timestamps=[1747679247, 1747679425, 1747679655, 1747680456], avg_minutes=6.72, ref_names=[])
+        '''
 
         for item in items :
-            print(item)
+            self.__logging_function(item)
 
-    def create_summary(self) -> Optional[Summary]:
+    def run(self, file_path: Optional[str]) -> Summary:
 
-        '''Creates a Summary.'''
+        '''Returns a Summary or raises an Exception.'''
+
+        commit_items : list[CommitItem] = self.__get_commit_items(file_path)
+        commit_items = self.__clean_commit_items(commit_items = commit_items)
+
+        daily_statuses : list[DailyStatus] = self.__create_daily_statuses(commit_items = commit_items)
+        monthly_statuses : list[MonthlyStatus] = self.__create_monthly_statuses(daily_statuses = daily_statuses)
+
+        daily_logging_function : Callable[[], None] = lambda : self.__log_items(items = daily_statuses)
+        monthly_logging_function : Callable[[], None] = lambda : self.__log_items(items = monthly_statuses)
+        table_logging_function : Callable[[], None] = lambda : self.__log_table(monthly_statuses = monthly_statuses)  
+        
+        summary : Summary = Summary(
+            commit_items = commit_items,
+            daily_statuses = daily_statuses,
+            monthly_statuses = monthly_statuses,
+            daily_logging_function = daily_logging_function,
+            monthly_logging_function = monthly_logging_function,
+            table_logging_function = table_logging_function
+        )
+
+        return summary
+    def run_and_log(self, file_path: Optional[str] = None) -> None:
+
+        '''Logs the outcome of the calculation or the Exception message.'''
 
         try:
 
-            commit_items : list[CommitItem] = self.__get_commit_items()
-            commit_items = self.__clean_commit_items(commit_items = commit_items)
+            summary : Summary = self.run(file_path = file_path)
+            # summary.table_logging_function()
+            summary.daily_logging_function()
 
-            daily_statuses : list[DailyStatus] = self.__create_daily_statuses(commit_items = commit_items)
-            monthly_statuses : list[MonthlyStatus] = self.__create_monthly_statuses(daily_statuses = daily_statuses)
-
-            daily_logging_function : Callable[[], None] = lambda : self.__log_items(items = daily_statuses)
-            monthly_logging_function : Callable[[], None] = lambda : self.__log_items(items = daily_statuses)
-            table_logging_function : Callable[[], None] = lambda : self.__log_table(monthly_statuses = monthly_statuses)  
-            
-            summary : Summary = Summary(
-                commit_items = commit_items,
-                daily_statuses = daily_statuses,
-                monthly_statuses = monthly_statuses,
-                daily_logging_function = daily_logging_function,
-                monthly_logging_function = monthly_logging_function,
-                table_logging_function = table_logging_function
-            )
-
-            return summary
-        
         except Exception as e:
 
             self.__logging_function(str(e))
-            return None
 
 # MAIN
 if __name__ == "__main__":
-    
-    summary : Optional[Summary] = CommitAverageCalculator().create_summary()
-
-    if summary:
-        summary.table_logging_function()
+    CommitAverageCalculator().run_and_log()
