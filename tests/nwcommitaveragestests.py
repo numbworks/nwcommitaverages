@@ -8,7 +8,7 @@ from typing import Callable, Optional, Tuple, cast
 # LOCAL MODULES
 import sys, os
 sys.path.append(os.path.dirname(__file__).replace('tests', 'src'))
-from nwcommitaverages import LOGTYPE, _MessageCollection, APFactory, APAdapter
+from nwcommitaverages import LOGTYPE, _MessageCollection, APFactory, APAdapter, CLIManager, CommitAverageCalculator
 
 # SUPPORT METHODS
 # TEST CLASSES
@@ -111,6 +111,30 @@ class APAdapterTestCase(unittest.TestCase):
 
         # Assert
         self.assertEqual(expected, actual)
+class CLIManagerTestCase(unittest.TestCase):
+
+    @parameterized.expand([
+        ("/workspaces/nwsomething", LOGTYPE.TABLE),
+        (None, None)
+    ])
+    def test_runandlog_shouldcallcalculatorwithargs_wheninvoked(self, file_path : Optional[str], log_type : Optional[LOGTYPE]) -> None:
+
+        # Arrange
+        ap_adapter : APAdapter = Mock()
+        ap_adapter.parse_args.return_value = (file_path, log_type)
+
+        ca_calculator : CommitAverageCalculator = Mock()
+
+        cli_manager : CLIManager = CLIManager(
+            ap_adapter = ap_adapter,
+            ca_calculator = ca_calculator
+        )
+
+        # Act
+        cli_manager.run_and_log()
+
+        # Assert
+        ca_calculator.run_and_log.assert_called_once_with(file_path = file_path, log_type = log_type)
 
 # MAIN
 if __name__ == "__main__":
