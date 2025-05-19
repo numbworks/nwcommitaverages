@@ -25,6 +25,14 @@ class LOGTYPE(StrEnum):
     MONTHLY = auto()
     
 # STATIC CLASSES
+class _MessageCollection():
+
+    '''Collects all the messages used for logging and for the exceptions.'''
+
+    @staticmethod
+    def provided_log_type_not_supported(log_type : LOGTYPE) -> str:
+        return f"The provided 'log_type' is not supported ('{log_type}')."
+
 # CLASSES
 @dataclass(frozen = True)
 class CommitItem():
@@ -354,7 +362,7 @@ class CommitAverageCalculator():
             summary.monthly_logging_function()
         
         else:
-            raise Exception(f"The provided 'log_type' is not supported ('{log_type}').")
+            raise Exception(_MessageCollection.provided_log_type_not_supported(log_type = log_type))
 
     def run(self, file_path: Optional[str]) -> Summary:
 
