@@ -9,12 +9,21 @@ import subprocess
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from enum import StrEnum, auto
 from subprocess import CompletedProcess
 from tabulate import tabulate
-from typing import Callable, Optional
+from typing import Callable, Literal, Optional
 
 # LOCAL MODULES
 # CONSTANTS
+class LOGTYPE(StrEnum):
+
+    '''Represents a collection of options.'''
+
+    TABLE = auto()
+    DAILY = auto()
+    MONTHLY = auto()
+    
 # STATIC CLASSES
 # CLASSES
 @dataclass(frozen = True)
@@ -331,6 +340,21 @@ class CommitAverageCalculator():
 
         for item in items :
             self.__logging_function(item)
+    def __orchestrate_logging(self, summary : Summary, log_type : Literal[LOGTYPE.TABLE, LOGTYPE.DAILY, LOGTYPE.MONTHLY]) -> None:
+
+        '''Orchestrate summary logging according to log_type.'''
+
+        if log_type == LOGTYPE.TABLE:
+            summary.table_logging_function()
+
+        elif log_type == LOGTYPE.DAILY:
+            summary.daily_logging_function()
+        
+        elif log_type == LOGTYPE.MONTHLY:
+            summary.monthly_logging_function()
+        
+        else:
+            raise Exception(f"The provided 'log_type' is not supported ('{log_type}').")
 
     def run(self, file_path: Optional[str]) -> Summary:
 
@@ -356,15 +380,17 @@ class CommitAverageCalculator():
         )
 
         return summary
-    def run_and_log(self, file_path: Optional[str] = None) -> None:
+    def run_and_log(
+        self, 
+        file_path: Optional[str] = None, 
+        log_type : Literal[LOGTYPE.TABLE, LOGTYPE.DAILY, LOGTYPE.MONTHLY] = LOGTYPE.TABLE) -> None:
 
         '''Logs the outcome of the calculation or the Exception message.'''
 
         try:
 
             summary : Summary = self.run(file_path = file_path)
-            # summary.table_logging_function()
-            summary.daily_logging_function()
+            self.__orchestrate_logging(summary = summary, log_type = log_type)
 
         except Exception as e:
 
