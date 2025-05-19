@@ -36,10 +36,10 @@ class _MessageCollection():
 
     @staticmethod
     def parser_description() -> str:
-        return "Checks if all methods in a Python file have docstrings."
+        return "Calculates the average commit value and logs the result."
     @staticmethod
     def parser_file_path() -> str:
-        return "The file path to the Python file to check docstrings for."
+        return "The file path to the Git repository for which the average commit value is calculated."
     @staticmethod
     def parser_logtype() -> str:
         return f"The type of log ('{LOGTYPE.TABLE}' for a tabular overview, '{LOGTYPE.DAILY}' and '{LOGTYPE.MONTHLY}' for a list of statuses). The default is '{LOGTYPE.TABLE}'."
@@ -461,7 +461,7 @@ class CLIManager():
 
     def run_and_log(self) -> None:
 
-        '''Runs the commit average calculation and logs the outcome.'''
+        '''Calculates the average commit value and logs the result.'''
 
         file_path, log_type = self.__ap_adapter.parse_args()
         self.__ca_calculator.run_and_log(file_path = file_path, log_type = log_type)
