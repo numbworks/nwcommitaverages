@@ -9,7 +9,7 @@ Contact: numbworks@gmail.com
 
 ## Introduction
 
-`nwcommitaverages` is a CLI application designed to calculate the average time between git commits.
+`nwcommitaverages` is a CLI application designed to calculate the average time between Git commits.
 
 ## Getting Started
 

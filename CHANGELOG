@@ -1,6 +1,7 @@
 v1.0.0
 - Application:
-	- Feature: accepts a file_path and returns a list of methods lacking docstrings.
-	- Feature: allows the user to exclude methods and classes - i.e. "__init__".
+	- Feature: calculates the average time between Git commits.
+	- Feature: accepts a file_path argument and allows the user to run the script against a custom Git repository.
+	- Feature: accepts a log_type argument and allows the user to view daily and monthly statuses as alternative to the tabular view.
 - Documentation:
 	- Feature: covers all the features available in v1.0.0.

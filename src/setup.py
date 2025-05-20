@@ -13,7 +13,7 @@ if __name__ == "__main__":
     setup(
         name = MODULE_NAME,
         version = MODULE_VERSION,
-        description = "A CLI application designed to calculate the average time between git commits.",
+        description = "A CLI application designed to calculate the average time between Git commits.",
         author = "numbworks",
         url = f"https://github.com/numbworks/{MODULE_NAME}",
         py_modules = [ MODULE_NAME ],
