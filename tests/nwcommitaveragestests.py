@@ -5,8 +5,8 @@ from datetime import datetime, timezone
 from parameterized import parameterized
 from subprocess import CompletedProcess
 from tabulate import tabulate
-from typing import Callable, Literal, Optional, Tuple, cast
-from unittest.mock import Mock, mock_open, patch
+from typing import Callable, Literal, Optional, Tuple
+from unittest.mock import Mock, patch
 
 # LOCAL MODULES
 import sys, os
@@ -503,7 +503,7 @@ class CommitAverageCalculatorTestCase(unittest.TestCase):
         # Arrange
         ca_calculator : CommitAverageCalculator = CommitAverageCalculator()
         file_path : Optional[str] = "/workspaces/nwsomething"
-        log_type : Optional[Literal[LOGTYPE.TABLE, LOGTYPE.DAILY, LOGTYPE.MONTHLY]] = LOGTYPE.TABLE
+        log_type : Optional[LOGTYPE] = LOGTYPE.TABLE
 
         with patch.object(ca_calculator, "run", return_value=Mock()) as mocked_run, \
              patch.object(ca_calculator, "_CommitAverageCalculator__orchestrate_logging") as mocked_orchestrate_logging:
@@ -523,7 +523,7 @@ class CommitAverageCalculatorTestCase(unittest.TestCase):
         ca_calculator : CommitAverageCalculator = CommitAverageCalculator(logging_function = logging_function)
 
         file_path : Optional[str] = "/workspaces/nwsomething"
-        log_type : Optional[Literal[LOGTYPE.TABLE, LOGTYPE.DAILY, LOGTYPE.MONTHLY]] = LOGTYPE.TABLE
+        log_type : Optional[LOGTYPE] = LOGTYPE.TABLE
         summary : Mock = Mock(spec = Summary)
         
         expected : list[str] = [
