@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from parameterized import parameterized
 from subprocess import CompletedProcess
 from tabulate import tabulate
-from typing import Callable, Optional, Tuple, cast
+from typing import Callable, Literal, Optional, Tuple, cast
 from unittest.mock import Mock, mock_open, patch
 
 # LOCAL MODULES
@@ -115,30 +115,6 @@ class APAdapterTestCase(unittest.TestCase):
 
         # Assert
         self.assertEqual(expected, actual)
-class CLIManagerTestCase(unittest.TestCase):
-
-    @parameterized.expand([
-        ("/workspaces/nwsomething", LOGTYPE.TABLE),
-        (None, None)
-    ])
-    def test_runandlog_shouldcallcalculatorwithargs_wheninvoked(self, file_path : Optional[str], log_type : Optional[LOGTYPE]) -> None:
-
-        # Arrange
-        ap_adapter : APAdapter = Mock()
-        ap_adapter.parse_args.return_value = (file_path, log_type)
-
-        ca_calculator : CommitAverageCalculator = Mock()
-
-        cli_manager : CLIManager = CLIManager(
-            ap_adapter = ap_adapter,
-            ca_calculator = ca_calculator
-        )
-
-        # Act
-        cli_manager.run_and_log()
-
-        # Assert
-        ca_calculator.run_and_log.assert_called_once_with(file_path = file_path, log_type = log_type)
 class CommitAverageCalculatorTestCase(unittest.TestCase):
 
     def test_createtimestampdt_shouldreturnexpecteddatetimetz_wheninvoked(self) -> None:
@@ -500,6 +476,93 @@ class CommitAverageCalculatorTestCase(unittest.TestCase):
             CommitAverageCalculator()._CommitAverageCalculator__orchestrate_logging(summary = summary, log_type = log_type)  # type: ignore
 
         self.assertEqual(expected, str(context.exception))
+
+    def test_run_shouldcallexpectedprivatemethodsandreturnasummary_wheninvoked(self) -> None:
+
+        # Arrange
+        ca_calculator : CommitAverageCalculator = CommitAverageCalculator()
+        file_path : Optional[str] = "/workspaces/nwsomething"
+
+        with patch.object(ca_calculator, "_CommitAverageCalculator__get_commit_items", return_value=[]) as mocked_get_commit_items, \
+             patch.object(ca_calculator, "_CommitAverageCalculator__clean_commit_items", return_value=[]) as mocked_clean_commit_items, \
+             patch.object(ca_calculator, "_CommitAverageCalculator__create_daily_statuses", return_value=[]) as mocked_create_daily_statuses, \
+             patch.object(ca_calculator, "_CommitAverageCalculator__create_monthly_statuses", return_value=[]) as mocked_create_monthly_statuses:
+
+            # Act
+            summary : Summary = ca_calculator.run(file_path = file_path)
+
+            # Assert
+            mocked_get_commit_items.assert_called_once_with(file_path)
+            mocked_clean_commit_items.assert_called_once_with(commit_items = [])
+            mocked_create_daily_statuses.assert_called_once_with(commit_items = [])
+            mocked_create_monthly_statuses.assert_called_once_with(daily_statuses = [])
+
+            self.assertIsInstance(summary, Summary)
+    def test_runandlog_shouldcallrunandorchestralogging_wheninvoked(self) -> None:
+
+        # Arrange
+        ca_calculator : CommitAverageCalculator = CommitAverageCalculator()
+        file_path : Optional[str] = "/workspaces/nwsomething"
+        log_type : Optional[Literal[LOGTYPE.TABLE, LOGTYPE.DAILY, LOGTYPE.MONTHLY]] = LOGTYPE.TABLE
+
+        with patch.object(ca_calculator, "run", return_value=Mock()) as mocked_run, \
+             patch.object(ca_calculator, "_CommitAverageCalculator__orchestrate_logging") as mocked_orchestrate_logging:
+
+            # Act
+            ca_calculator.run_and_log(file_path = file_path, log_type = log_type)
+
+            # Assert
+            mocked_run.assert_called_once_with(file_path = file_path)
+            mocked_orchestrate_logging.assert_called_once()
+    def test_runandlog_shouldlogexceptionmessage_whenorchestrateloggingraisesexception(self) -> None:
+
+        # Arrange
+        actual : list[str] = []
+        logging_function : Callable[[str], None] = lambda msg : actual.append(msg)
+
+        ca_calculator : CommitAverageCalculator = CommitAverageCalculator(logging_function = logging_function)
+
+        file_path : Optional[str] = "/workspaces/nwsomething"
+        log_type : Optional[Literal[LOGTYPE.TABLE, LOGTYPE.DAILY, LOGTYPE.MONTHLY]] = LOGTYPE.TABLE
+        summary : Mock = Mock(spec = Summary)
+        
+        expected : list[str] = [
+            "The provided 'log_type' is not supported ('...')."
+        ]
+
+        with patch.object(ca_calculator, "run", return_value = summary) as mocked_run, \
+             patch.object(ca_calculator, "_CommitAverageCalculator__orchestrate_logging", side_effect = Exception(expected[0])) as mocked_orchestrate_logging:
+
+            # Act
+            ca_calculator.run_and_log(file_path = file_path, log_type = log_type)
+
+            # Assert
+            mocked_orchestrate_logging.assert_called_once_with(summary = summary, log_type = log_type)
+            self.assertEqual(expected, actual)
+class CLIManagerTestCase(unittest.TestCase):
+
+    @parameterized.expand([
+        ("/workspaces/nwsomething", LOGTYPE.TABLE),
+        (None, None)
+    ])
+    def test_runandlog_shouldcallcalculatorwithargs_wheninvoked(self, file_path : Optional[str], log_type : Optional[LOGTYPE]) -> None:
+
+        # Arrange
+        ap_adapter : APAdapter = Mock()
+        ap_adapter.parse_args.return_value = (file_path, log_type)
+
+        ca_calculator : CommitAverageCalculator = Mock()
+
+        cli_manager : CLIManager = CLIManager(
+            ap_adapter = ap_adapter,
+            ca_calculator = ca_calculator
+        )
+
+        # Act
+        cli_manager.run_and_log()
+
+        # Assert
+        ca_calculator.run_and_log.assert_called_once_with(file_path = file_path, log_type = log_type)
 
 # MAIN
 if __name__ == "__main__":
