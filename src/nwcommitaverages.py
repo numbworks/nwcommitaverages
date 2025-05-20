@@ -5,8 +5,8 @@ Alias: nwca
 '''
 
 # GLOBAL MODULES
-from argparse import ArgumentParser, Namespace
 import subprocess
+from argparse import ArgumentParser, Namespace
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime, timezone
