@@ -10,7 +10,7 @@ from unittest.mock import Mock, mock_open, patch
 # LOCAL MODULES
 import sys, os
 sys.path.append(os.path.dirname(__file__).replace('tests', 'src'))
-from nwcommitaverages import LOGTYPE, _MessageCollection, APFactory, APAdapter, CLIManager, CommitAverageCalculator, CommitItem
+from nwcommitaverages import LOGTYPE, _MessageCollection, APFactory, APAdapter, CLIManager, CommitAverageCalculator, CommitItem, MonthlyStatus
 from nwcommitaverages import DailyStatus
 
 # SUPPORT METHODS
@@ -320,6 +320,83 @@ class CommitAverageCalculatorTestCase(unittest.TestCase):
         self.assertEqual(expected[0].timestamp_int, actual[0].timestamp_int)
         self.assertEqual(expected[0].timestamp_dt, actual[0].timestamp_dt)
         self.assertEqual(expected[0].ref_names, actual[0].ref_names)
+    def test_createdailystatuses_shouldgroupandcomputeavg_wheninvoked(self) -> None:
+
+        # Arrange
+        commit_items : list[CommitItem] = [
+            CommitItem(date_str = "2023-11-17", timestamp_int = 1700239075, timestamp_dt = datetime.fromtimestamp(1700239075), ref_names = ["ref1"]),
+            CommitItem(date_str = "2023-11-17", timestamp_int = 1700239305, timestamp_dt = datetime.fromtimestamp(1700239305), ref_names = ["ref2"]),
+            CommitItem(date_str = "2023-11-17", timestamp_int = 1700240579, timestamp_dt = datetime.fromtimestamp(1700240579), ref_names = []),
+            CommitItem(date_str = "2023-11-17", timestamp_int = 1700246557, timestamp_dt = datetime.fromtimestamp(1700246557), ref_names = []),
+            CommitItem(date_str = "2023-11-20", timestamp_int = 1700508271, timestamp_dt = datetime.fromtimestamp(1700508271), ref_names = ["ref3"]),
+            CommitItem(date_str = "2023-11-20", timestamp_int = 1700508711, timestamp_dt = datetime.fromtimestamp(1700508711), ref_names = ["ref4"])
+        ]
+        expected : list[DailyStatus] = [
+            DailyStatus(
+                date_str = "2023-11-17",
+                timestamps = [1700239075, 1700239305, 1700240579, 1700246557],
+                avg_minutes = 41.57,
+                ref_names = ["ref1", "ref2"]
+            ),
+            DailyStatus(
+                date_str = "2023-11-20",
+                timestamps = [1700508271, 1700508711],
+                avg_minutes = 7.33,
+                ref_names = ["ref3", "ref4"]
+            )
+        ]
+
+        # Act
+        actual : list[DailyStatus] = CommitAverageCalculator()._CommitAverageCalculator__create_daily_statuses(commit_items = commit_items)  # type: ignore
+
+        # Assert
+        self.assertEqual(len(actual), 2)
+
+        for i in range(0,2):
+            self.assertEqual(expected[i].date_str, actual[i].date_str)
+            self.assertEqual(expected[i].timestamps, actual[i].timestamps)
+            self.assertAlmostEqual(expected[i].avg_minutes, actual[i].avg_minutes, places = 2)
+            self.assertCountEqual(expected[i].ref_names, actual[i].ref_names)
+    def test_createmonthlystatuses_shouldgroupandcomputeavg_wheninvoked(self) -> None:
+
+        # Arrange
+        daily_statuses : list[DailyStatus] = [
+            DailyStatus(
+                date_str = "2023-11-17",
+                timestamps = [1700239075, 1700239305, 1700240579, 1700246557],
+                avg_minutes = 41.57,
+                ref_names = ["ref1", "ref2"]
+            ),
+            DailyStatus(
+                date_str = "2023-11-20",
+                timestamps = [1700508271, 1700508711],
+                avg_minutes = 7.33,
+                ref_names = ["ref3", "ref4"]
+            )
+        ]
+        expected : list[MonthlyStatus] = [
+            MonthlyStatus(
+                year_month = "2023-11",
+                dates = 2,
+                timestamps = [1700239075, 1700239305, 1700240579, 1700246557, 1700508271, 1700508711],
+                avg_minutes = 24.45,
+                ref_names = ["ref1", "ref2", "ref3", "ref4"]
+            )
+        ]
+        calculator : CommitAverageCalculator = CommitAverageCalculator()
+
+        # Act
+        actual : list[MonthlyStatus] = calculator._CommitAverageCalculator__create_monthly_statuses(daily_statuses = daily_statuses)  # type: ignore
+
+        # Assert
+        self.assertEqual(len(expected), len(actual))
+
+        self.assertEqual(expected[0].year_month, actual[0].year_month)
+        self.assertEqual(expected[0].dates, actual[0].dates)
+        self.assertEqual(expected[0].timestamps, actual[0].timestamps)
+        self.assertAlmostEqual(expected[0].avg_minutes, actual[0].avg_minutes, places = 2)
+        self.assertCountEqual(expected[0].ref_names, actual[0].ref_names)
+
 
 
 # MAIN
