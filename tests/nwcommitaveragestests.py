@@ -1,4 +1,5 @@
 # GLOBAL MODULES
+from subprocess import CompletedProcess
 import unittest
 from argparse import ArgumentParser, Namespace
 from datetime import datetime, timezone
@@ -263,7 +264,33 @@ class CommitAverageCalculatorTestCase(unittest.TestCase):
 
         # Assert
         self.assertEqual(expected, actual)
+    def test_getcommititems_shouldreturnexpectedcommititems_whenstdoutisvalid(self) -> None:
 
+        # Arrange
+        stdout : str = (
+            "2023-08-16;1692207406;\n"
+            "2023-08-21;1692636918;origin/v4.6.0\n"
+            "2023-08-21;1692637081;HEAD -> master, origin/master, origin/HEAD"
+        )
+        completed_process : CompletedProcess = CompletedProcess(args = [], returncode = 0, stdout = stdout)
+        expected : list[CommitItem] = [
+            CommitItem(date_str = "2023-08-16", timestamp_int = 1692207406, timestamp_dt = datetime.fromtimestamp(1692207406, tz = timezone.utc), ref_names = []),
+            CommitItem(date_str = "2023-08-21", timestamp_int = 1692636918, timestamp_dt = datetime.fromtimestamp(1692636918, tz = timezone.utc), ref_names = ["origin/v4.6.0"]),
+            CommitItem(date_str = "2023-08-21", timestamp_int = 1692637081, timestamp_dt = datetime.fromtimestamp(1692637081, tz = timezone.utc), ref_names = ["HEAD -> master", " origin/master", " origin/HEAD"])
+        ]
+
+        # Act
+        with patch("subprocess.run") as mocked_run:
+            mocked_run.return_value = completed_process
+            actual : list[CommitItem] = CommitAverageCalculator()._CommitAverageCalculator__get_commit_items(file_path = None)  # type: ignore
+
+        # Assert
+        self.assertEqual(len(actual), 3)
+        for i in range(0,2):
+            self.assertEqual(expected[i].date_str, actual[i].date_str)
+            self.assertEqual(expected[i].timestamp_int, actual[i].timestamp_int)
+            self.assertEqual(expected[i].timestamp_dt, actual[i].timestamp_dt)
+            self.assertEqual(expected[i].ref_names, actual[i].ref_names)
 
 # MAIN
 if __name__ == "__main__":
