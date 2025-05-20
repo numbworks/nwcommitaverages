@@ -1,9 +1,10 @@
 # GLOBAL MODULES
-from subprocess import CompletedProcess
 import unittest
 from argparse import ArgumentParser, Namespace
 from datetime import datetime, timezone
 from parameterized import parameterized
+from subprocess import CompletedProcess
+from tabulate import tabulate
 from typing import Callable, Optional, Tuple, cast
 from unittest.mock import Mock, mock_open, patch
 
@@ -396,6 +397,47 @@ class CommitAverageCalculatorTestCase(unittest.TestCase):
         self.assertEqual(expected[0].timestamps, actual[0].timestamps)
         self.assertAlmostEqual(expected[0].avg_minutes, actual[0].avg_minutes, places = 2)
         self.assertCountEqual(expected[0].ref_names, actual[0].ref_names)
+    def test_logtable_shouldtabulatemonthlystatusesandlogtable_wheninvoked(self) -> None:
+
+        # Arrange
+        logs : list[str] = []
+        logging_function : Callable[[str], None] = lambda msg : logs.append(msg)
+
+        monthly_statuses : list[MonthlyStatus] = [
+            MonthlyStatus(
+                year_month = "2023-08",
+                dates = 2,
+                timestamps = [1700239075, 1700239305, 1700240579, 1700246557, 1700508271, 1700508711],
+                avg_minutes = 721.28,
+                ref_names = ["v3.2.0", "v3.3.0"]
+            ),
+            MonthlyStatus(
+                year_month = "2023-09",
+                dates = 1,
+                timestamps = [1700600000],
+                avg_minutes = 0.00,
+                ref_names = ["v3.4.0"]
+            )
+        ]
+
+        expected : str = (
+            "+-------------+--------+-----------+---------------+----------------+\n"
+            "| YearMonth   |   Days |   Commits |   DailyAvgMin | RefNames       |\n"
+            "+=============+========+===========+===============+================+\n"
+            "| 2023-08     |      2 |         6 |        721.28 | v3.2.0, v3.3.0 |\n"
+            "+-------------+--------+-----------+---------------+----------------+\n"
+            "| 2023-09     |      1 |         1 |   Not enough data | v3.4.0     |\n"
+            "+-------------+--------+-----------+---------------+----------------+"
+        )
+
+        # Act, Assert
+        with patch("nwcommitaverages.tabulate", return_value = expected) as mocked_tabulate:
+            
+            ca_calculator : CommitAverageCalculator = CommitAverageCalculator(logging_function = logging_function)
+            ca_calculator._CommitAverageCalculator__log_table(monthly_statuses = monthly_statuses)  # type: ignore
+
+            mocked_tabulate.assert_called_once()
+            self.assertEqual(logs[0], expected)
 
 
 
