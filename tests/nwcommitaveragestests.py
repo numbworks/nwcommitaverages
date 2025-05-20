@@ -438,6 +438,29 @@ class CommitAverageCalculatorTestCase(unittest.TestCase):
 
             mocked_tabulate.assert_called_once()
             self.assertEqual(logs[0], expected)
+    def test_logitems_shouldlogallitems_wheninvoked(self) -> None:
+
+        # Arrange
+        actual : list[str] = []
+        logging_function : Callable[[str], None] = lambda msg : actual.append(msg)
+
+        items : list[object] = [
+            DailyStatus(date_str = "2025-05-19", timestamps = [1, 2, 3], avg_minutes = 6.72, ref_names = []),
+            MonthlyStatus(year_month = "2025-05", dates = 1, timestamps = [1, 2, 3], avg_minutes = 6.72, ref_names = [])
+        ]
+
+        expected : list[str] = [
+            "DailyStatus(date_str='2025-05-19', timestamps=[1, 2, 3], avg_minutes=6.72, ref_names=[])",
+            "MonthlyStatus(year_month='2025-05', dates=1, timestamps=[1, 2, 3], avg_minutes=6.72, ref_names=[])"
+        ]
+
+        # Act
+        calculator : CommitAverageCalculator = CommitAverageCalculator(logging_function = logging_function)
+        calculator._CommitAverageCalculator__log_items(items = items)  # type: ignore
+
+        # Assert
+        self.assertEqual(expected[0], str(actual[0]))
+        self.assertEqual(expected[1], str(actual[1]))
 
 
 
