@@ -234,6 +234,35 @@ class CommitAverageCalculatorTestCase(unittest.TestCase):
 
         # Assert
         self.assertEqual(expected, actual)
+    def test_countdaysinmonth_shouldreturnexpectedcount_wheninvoked(self) -> None:
+
+        # Arrange
+        daily_statuses : list[DailyStatus] = [
+            DailyStatus(date_str = "2023-10-01", timestamps = [], avg_minutes = 15.0, ref_names = []),
+            DailyStatus(date_str = "2023-10-01", timestamps = [], avg_minutes = 20.0, ref_names = []),
+            DailyStatus(date_str = "2023-10-02", timestamps = [], avg_minutes = 10.0, ref_names = []),
+        ]
+        expected : int = 2
+
+        # Act
+        actual : int = CommitAverageCalculator()._CommitAverageCalculator__count_days_in_month(daily_statuses = daily_statuses)  # type: ignore
+
+        # Assert
+        self.assertEqual(expected, actual)
+    def test_extractavgminutes_shouldreturnexpectedfloats_wheninvoked(self) -> None:
+
+        # Arrange
+        daily_statuses : list[DailyStatus] = [
+            DailyStatus(date_str = "2023-10-01", timestamps = [], avg_minutes = 30.0, ref_names = []),
+            DailyStatus(date_str = "2023-10-02", timestamps = [], avg_minutes = 45.5, ref_names = []),
+        ]
+        expected : list[float] = [30.0, 45.5]
+
+        # Act
+        actual : list[float] = CommitAverageCalculator()._CommitAverageCalculator__extract_avg_minutes(daily_statuses = daily_statuses)  # type: ignore
+
+        # Assert
+        self.assertEqual(expected, actual)
 
 
 # MAIN
