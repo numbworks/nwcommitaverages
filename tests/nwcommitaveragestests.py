@@ -11,7 +11,7 @@ from unittest.mock import Mock, mock_open, patch
 # LOCAL MODULES
 import sys, os
 sys.path.append(os.path.dirname(__file__).replace('tests', 'src'))
-from nwcommitaverages import LOGTYPE, _MessageCollection, APFactory, APAdapter, CLIManager, CommitAverageCalculator, CommitItem, MonthlyStatus
+from nwcommitaverages import LOGTYPE, _MessageCollection, APFactory, APAdapter, CLIManager, CommitAverageCalculator, CommitItem, MonthlyStatus, Summary
 from nwcommitaverages import DailyStatus
 
 # SUPPORT METHODS
@@ -461,7 +461,33 @@ class CommitAverageCalculatorTestCase(unittest.TestCase):
         # Assert
         self.assertEqual(expected[0], str(actual[0]))
         self.assertEqual(expected[1], str(actual[1]))
+    def test_orchestratelogging_shouldcallexpectedloggingfunction_whenlogtypeisvalid(self) -> None:
 
+        # Arrange
+        table_logging_function : Mock = Mock()
+        daily_logging_function : Mock = Mock()
+        monthly_logging_function : Mock = Mock()
+
+        summary : Summary = Summary(
+            commit_items = [],
+            daily_statuses = [],
+            monthly_statuses = [],
+            daily_logging_function = daily_logging_function,
+            monthly_logging_function = monthly_logging_function,
+            table_logging_function = table_logging_function
+        )
+
+        calculator : CommitAverageCalculator = CommitAverageCalculator()
+
+        # Act
+        calculator._CommitAverageCalculator__orchestrate_logging(summary = summary, log_type = LOGTYPE.TABLE)  # type: ignore
+        calculator._CommitAverageCalculator__orchestrate_logging(summary = summary, log_type = LOGTYPE.DAILY)  # type: ignore
+        calculator._CommitAverageCalculator__orchestrate_logging(summary = summary, log_type = LOGTYPE.MONTHLY)  # type: ignore
+
+        # Assert
+        table_logging_function.assert_called_once()
+        daily_logging_function.assert_called_once()
+        monthly_logging_function.assert_called_once()
 
 
 # MAIN
