@@ -488,7 +488,18 @@ class CommitAverageCalculatorTestCase(unittest.TestCase):
         table_logging_function.assert_called_once()
         daily_logging_function.assert_called_once()
         monthly_logging_function.assert_called_once()
+    def test_orchestratelogging_shouldraiseexception_wheninvalidlogtype(self) -> None:
 
+        # Arrange
+        summary : Summary = Mock(spec = Summary)
+        log_type : str = "INVALID"
+        expected : str = "The provided 'log_type' is not supported ('INVALID')."
+
+        # Act, Assert
+        with self.assertRaises(Exception) as context:
+            CommitAverageCalculator()._CommitAverageCalculator__orchestrate_logging(summary = summary, log_type = log_type)  # type: ignore
+
+        self.assertEqual(expected, str(context.exception))
 
 # MAIN
 if __name__ == "__main__":
