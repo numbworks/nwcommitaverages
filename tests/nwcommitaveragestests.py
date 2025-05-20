@@ -286,11 +286,41 @@ class CommitAverageCalculatorTestCase(unittest.TestCase):
 
         # Assert
         self.assertEqual(len(actual), 3)
-        for i in range(0,2):
+        for i in range(0,3):
             self.assertEqual(expected[i].date_str, actual[i].date_str)
             self.assertEqual(expected[i].timestamp_int, actual[i].timestamp_int)
             self.assertEqual(expected[i].timestamp_dt, actual[i].timestamp_dt)
             self.assertEqual(expected[i].ref_names, actual[i].ref_names)
+    def test_cleancommititems_shouldreturncommititemswithcleanrefs_whenrefsdirty(self) -> None:
+
+        # Arrange
+        commit_item : CommitItem = CommitItem(
+            date_str = "2023-10-01",
+            timestamp_int = 1700000000,
+            timestamp_dt = datetime.fromtimestamp(1700000000, tz = timezone.utc),
+            ref_names = [
+                "origin/dev", 
+                "origin/HEAD", 
+                "tag:v1.0", 
+                "origin/main", 
+                "HEAD -> master", 
+                "origin/dev"
+            ]
+        )
+        expected : list[CommitItem] = [
+            CommitItem(date_str = "2023-10-01", timestamp_int = 1700000000, timestamp_dt = datetime.fromtimestamp(1700000000, tz = timezone.utc), ref_names = ["dev", "main"])
+        ]
+
+        # Act
+        actual : list[CommitItem] = CommitAverageCalculator()._CommitAverageCalculator__clean_commit_items(commit_items = [commit_item])  # type: ignore
+
+        # Assert
+        self.assertEqual(len(actual), 1)
+        self.assertEqual(expected[0].date_str, actual[0].date_str)
+        self.assertEqual(expected[0].timestamp_int, actual[0].timestamp_int)
+        self.assertEqual(expected[0].timestamp_dt, actual[0].timestamp_dt)
+        self.assertEqual(expected[0].ref_names, actual[0].ref_names)
+
 
 # MAIN
 if __name__ == "__main__":
