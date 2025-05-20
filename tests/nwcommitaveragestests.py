@@ -10,6 +10,7 @@ from unittest.mock import Mock, mock_open, patch
 import sys, os
 sys.path.append(os.path.dirname(__file__).replace('tests', 'src'))
 from nwcommitaverages import LOGTYPE, _MessageCollection, APFactory, APAdapter, CLIManager, CommitAverageCalculator, CommitItem
+from nwcommitaverages import DailyStatus
 
 # SUPPORT METHODS
 # TEST CLASSES
@@ -193,7 +194,7 @@ class CommitAverageCalculatorTestCase(unittest.TestCase):
         self.assertEqual(expected.date_str, actual.date_str)
         self.assertEqual(expected.timestamp_int, actual.timestamp_int)
         self.assertEqual(expected.timestamp_dt, actual.timestamp_dt)
-    def test_cleanrefnames_shouldreturncleanedlist_whenrefnamescontainremovableitems(self) -> None:
+    def test_cleanrefnames_shouldreturncleanedlist_whenrefnamescontainssomeremovableitems(self) -> None:
 
         # Arrange
         ref_names : list[str] = [
@@ -208,6 +209,28 @@ class CommitAverageCalculatorTestCase(unittest.TestCase):
 
         # Act
         actual : list[str] = CommitAverageCalculator()._CommitAverageCalculator__clean_ref_names(ref_names = ref_names)  # type: ignore
+
+        # Assert
+        self.assertEqual(expected, actual)
+    def test_cleanrefnames_shouldreturnemptylist_whenrefnamescontainsonlyremovableitems(self) -> None:
+
+        # Arrange
+        ref_names : list[str] = ["origin/HEAD", "origin/master", "tag:v1.0", "HEAD->master"]
+        expected : list[str] = []
+
+        # Act
+        actual : list[str] = CommitAverageCalculator()._CommitAverageCalculator__clean_ref_names(ref_names = ref_names)  # type: ignore
+
+        # Assert
+        self.assertEqual(expected, actual)
+    def test_createyearmonth_shouldreturnyearmonthstring_whenvaliddatestring(self) -> None:
+
+        # Arrange
+        date_str : str = "2023-11-17"
+        expected : str = "2023-11"
+
+        # Act
+        actual : str = CommitAverageCalculator()._CommitAverageCalculator__create_year_month(date_str = date_str)  # type: ignore
 
         # Assert
         self.assertEqual(expected, actual)
