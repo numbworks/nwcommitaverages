@@ -1,14 +1,15 @@
 # GLOBAL MODULES
 import unittest
-from unittest.mock import Mock, mock_open, patch
 from argparse import ArgumentParser, Namespace
+from datetime import datetime, timezone
 from parameterized import parameterized
 from typing import Callable, Optional, Tuple, cast
+from unittest.mock import Mock, mock_open, patch
 
 # LOCAL MODULES
 import sys, os
 sys.path.append(os.path.dirname(__file__).replace('tests', 'src'))
-from nwcommitaverages import LOGTYPE, _MessageCollection, APFactory, APAdapter, CLIManager, CommitAverageCalculator
+from nwcommitaverages import LOGTYPE, _MessageCollection, APFactory, APAdapter, CLIManager, CommitAverageCalculator, CommitItem
 
 # SUPPORT METHODS
 # TEST CLASSES
@@ -135,6 +136,82 @@ class CLIManagerTestCase(unittest.TestCase):
 
         # Assert
         ca_calculator.run_and_log.assert_called_once_with(file_path = file_path, log_type = log_type)
+class CommitAverageCalculatorTestCase(unittest.TestCase):
+
+    def test_createtimestampdt_shouldreturnexpecteddatetimetz_wheninvoked(self) -> None:
+
+        # Arrange
+        timestamp_int : int = 1700000000
+        expected : datetime = datetime.fromtimestamp(timestamp_int, tz = timezone.utc)
+
+        # Act
+        actual : datetime = CommitAverageCalculator()._CommitAverageCalculator__create_timestamp_dt(timestamp_int = timestamp_int)  # type: ignore
+
+        # Assert
+        self.assertEqual(expected, actual)
+    def test_createcommititem_shouldreturnexpectedcommititem_wheninvoked(self) -> None:
+
+        # Arrange
+        triplet : list[str] = ["2023-12-01", "1700000000", "origin/feature-a,origin/dev"]
+        expected : CommitItem = CommitItem(
+            date_str = "2023-12-01",
+            timestamp_int = 1700000000,
+            timestamp_dt = datetime.fromtimestamp(1700000000, tz = timezone.utc),
+            ref_names = ["origin/feature-a", "origin/dev"]
+        )
+
+        # Act
+        actual : CommitItem = CommitAverageCalculator()._CommitAverageCalculator__create_commit_item(triplet_lst = triplet)  # type: ignore
+
+        # Assert
+        self.assertEqual(expected.date_str, actual.date_str)
+        self.assertEqual(expected.timestamp_int, actual.timestamp_int)
+        self.assertEqual(expected.timestamp_dt, actual.timestamp_dt)
+        self.assertEqual(expected.ref_names, actual.ref_names)
+    def test_updaterefnames_shouldreturnupdatedcommititem_wheninvoked(self) -> None:
+
+        # Arrange
+        commit_item : CommitItem = CommitItem(
+            date_str = "2023-12-01",
+            timestamp_int = 1700000000,
+            timestamp_dt = datetime.fromtimestamp(1700000000, tz = timezone.utc),
+            ref_names = ["main"]
+        )
+        ref_names : list[str] = ["develop", "release"]
+        expected : CommitItem = CommitItem(
+            date_str = "2023-12-01",
+            timestamp_int = 1700000000,
+            timestamp_dt = datetime.fromtimestamp(1700000000, tz = timezone.utc),
+            ref_names = ["develop", "release"]
+        )
+
+        # Act
+        actual : CommitItem = CommitAverageCalculator()._CommitAverageCalculator__update_ref_names(commit_item = commit_item, ref_names = ref_names)  # type: ignore
+
+        # Assert
+        self.assertEqual(expected.ref_names, actual.ref_names)
+        self.assertEqual(expected.date_str, actual.date_str)
+        self.assertEqual(expected.timestamp_int, actual.timestamp_int)
+        self.assertEqual(expected.timestamp_dt, actual.timestamp_dt)
+    def test_cleanrefnames_shouldreturncleanedlist_whenrefnamescontainremovableitems(self) -> None:
+
+        # Arrange
+        ref_names : list[str] = [
+            " origin/feature-x ",
+            "origin/HEAD",
+            "tag:v1.0",
+            "origin/master",
+            "HEAD->master",
+            "origin/bugfix"
+        ]
+        expected : list[str] = ["bugfix", "feature-x"]
+
+        # Act
+        actual : list[str] = CommitAverageCalculator()._CommitAverageCalculator__clean_ref_names(ref_names = ref_names)  # type: ignore
+
+        # Assert
+        self.assertEqual(expected, actual)
+
 
 # MAIN
 if __name__ == "__main__":
