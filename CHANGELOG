@@ -1,3 +1,12 @@
+v1.1.0
+- Application:
+	- Feature: added support for AsciiBanner.
+- Maintenance:
+	- Moved from a devcontainer to a named devcontainer.
+	- Added support for nwbuilders.
+- Documentation:
+	- Feature: covers all the features available in v1.1.0.
+
 v1.0.0
 - Application:
 	- Feature: calculates the average time between Git commits.
