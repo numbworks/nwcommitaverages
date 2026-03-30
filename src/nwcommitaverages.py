@@ -7,16 +7,17 @@ Alias: nwcavg
 # GLOBAL MODULES
 import os
 import subprocess
-from argparse import ArgumentParser, Namespace
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from enum import StrEnum, auto
 from subprocess import CompletedProcess
 from tabulate import tabulate
-from typing import Callable, Literal, Optional, Tuple
+from typing import Callable, Literal, Optional
 
 # LOCAL MODULES
+from setupinfo import MODULE_VERSION
+
 # CONSTANTS
 class LOGTYPE(StrEnum):
 
@@ -36,9 +37,16 @@ class HEADER(StrEnum):
     REFNAMES = "RefNames"
 
 # STATIC CLASSES
-class _MessageCollection():
+class _MessageCollectionAsciiBannerManager():
 
     '''Collects all the messages used for logging and for the exceptions.'''
+
+    @staticmethod
+    def provided_version_empty_whitespace() -> str:
+        return "The provided 'version' is empty or whitespace."
+class _MessageCollectionCommitAverageCalculator():
+
+    '''Collects all the messages used for logging and for the exceptions used by CommitAverageCalculator.'''
 
     @staticmethod
     def not_enough_data() -> str:
@@ -46,20 +54,13 @@ class _MessageCollection():
     @staticmethod
     def provided_log_type_not_supported(log_type : LOGTYPE) -> str:
         return f"The provided 'log_type' is not supported ('{log_type}')."
+class _MessageCollection(
+    _MessageCollectionAsciiBannerManager,
+    _MessageCollectionCommitAverageCalculator):
 
-    @staticmethod
-    def parser_description() -> str:
-        return "Calculates the average commit value and logs the result."
-    @staticmethod
-    def parser_file_path() -> str:
-        return "The file path to the Git repository for which the average commit value is calculated."
-    @staticmethod
-    def parser_logtype() -> str:
-        return f"The type of log ('{LOGTYPE.TABLE}' for a tabular overview, '{LOGTYPE.DAILY}' and '{LOGTYPE.MONTHLY}' for a list of statuses). The default is '{LOGTYPE.TABLE}'."
+    '''Collects all the messages used for logging and for the exceptions.'''
 
-    @staticmethod
-    def provided_version_empty_whitespace() -> str:
-        return "The provided 'version' is empty or whitespace."
+    pass
 
 # CLASSES
 @dataclass(frozen = True)
@@ -101,14 +102,82 @@ class Summary():
     daily_logging_function : Callable[[], None]
     monthly_logging_function : Callable[[], None]    
     table_logging_function : Callable[[], None]
+class AsciiBannerManager:
+
+    """
+        Creates the ASCII banner for the provided library's version.
+
+        The figlet can be generated using 
+            - 'http://www.network-science.de/ascii/' (font: "banner3-D", width: 120)
+            - 'https://www.askapache.com/online-tools/figlet-ascii/'.
+    """
+
+    def __validate(self, version: str) -> None:
+        
+        """Validates the provided 'version'."""
+
+        if not version or not version.strip():
+            raise ValueError(_MessageCollection.provided_version_empty_whitespace())
+    def __create_figlet(self) -> tuple:
+        
+        """Returns a tuple containing the figlet and its width."""
+        
+        lines : list[str] = [
+            "'##::: ##:'##:::::'##::'######:::::'###::::'##::::'##::'######:::",
+            " ###:: ##: ##:'##: ##:'##... ##:::'## ##::: ##:::: ##:'##... ##::",
+            " ####: ##: ##: ##: ##: ##:::..:::'##:. ##:: ##:::: ##: ##:::..:::",
+            " ## ## ##: ##: ##: ##: ##:::::::'##:::. ##: ##:::: ##: ##::'####:",
+            " ##. ####: ##: ##: ##: ##::::::: #########:. ##:: ##:: ##::: ##::",
+            " ##:. ###: ##: ##: ##: ##::: ##: ##.... ##::. ## ##::: ##::: ##::",
+            " ##::. ##:. ###. ###::. ######:: ##:::: ##:::. ###::::. ######:::",
+            "..::::..:::...::...::::......:::..:::::..:::::...::::::......::::"
+        ]
+
+        return (os.linesep.join(lines), len(lines[0]))
+    def __create_frame(self, version: str, max_length: int) -> tuple:
+        
+        """Returns a tuple containing the frame of the figlet."""
+        
+        version_token : str = f"Version: {version}"
+        
+        margin_length : int = 5
+        total_length : int = max_length - len(version_token) - margin_length
+
+        top_line : str = "*" * max_length
+        bottom_line : str = f"{top_line[:total_length]}{version_token}{'*' * margin_length}"
+
+        return (top_line, bottom_line)
+
+    def create(self, version: str) -> str:
+        
+        """Creates the formatted ASCII banner with a versioned frame."""
+        
+        self.__validate(version)
+
+        figlet, max_length = self.__create_figlet()
+        top_line, bottom_line = self.__create_frame(version, max_length)
+
+        ascii_banner : str = os.linesep.join([
+            top_line,
+            figlet,
+            bottom_line,
+            ""
+        ])
+
+        return ascii_banner
 class CommitAverageCalculator():
     
     '''Calculates custom averages related to the current git repository.'''
 
+    __ascii_banner_manager : AsciiBannerManager
     __logging_function : Callable[[str], None]
 
-    def __init__(self, logging_function : Callable[[str], None] = lambda msg : print(msg)) -> None:
+    def __init__(
+        self, 
+        ascii_banner_manager : AsciiBannerManager = AsciiBannerManager(),
+        logging_function : Callable[[str], None] = lambda msg : print(msg)) -> None:
 
+        self.__ascii_banner_manager = ascii_banner_manager
         self.__logging_function = logging_function
 
     def __create_timestamp_dt(self, timestamp_int : int) -> datetime:
@@ -425,130 +494,16 @@ class CommitAverageCalculator():
 
         try:
 
+            ascii_banner : str = self.__ascii_banner_manager.create(MODULE_VERSION)
+            self.__logging_function(ascii_banner)
+
             summary : Summary = self.run(file_path = file_path)
             self.__orchestrate_logging(summary = summary, log_type = log_type)
 
         except Exception as e:
 
             self.__logging_function(str(e))
-class APFactory():
-
-    '''Encapsulates all the logic related to the creation of a custom instance of argparse.ArgumentParser.'''
-
-    def create(self) -> ArgumentParser:
-
-        '''Creates a custom instance of argparse.ArgumentParser.'''
-
-        argument_parser : ArgumentParser = ArgumentParser(description = _MessageCollection.parser_description())
-        argument_parser.add_argument("--file_path", "-fp", required = False, help = _MessageCollection.parser_file_path())
-        argument_parser.add_argument("--logtype", "-lt", required = False, choices = [f"{LOGTYPE.TABLE}", f"{LOGTYPE.DAILY}", f"{LOGTYPE.MONTHLY}"], help = _MessageCollection.parser_logtype())
-
-        return argument_parser
-class APAdapter():
-
-    '''Customizes argparse.ArgumentParser for this use case.'''
-
-    __ap_factory : APFactory
-
-    def __init__(self, ap_factory : APFactory = APFactory()) -> None:
-        self.__ap_factory = ap_factory
-
-    def parse_args(self) -> Tuple[Optional[str], Optional[Literal[LOGTYPE.TABLE, LOGTYPE.DAILY, LOGTYPE.MONTHLY]]]:
-
-        '''Parses provided arguments.'''
-
-        parser : ArgumentParser = self.__ap_factory.create()
-        args : Namespace = parser.parse_args()
-
-        return (args.file_path, args.logtype)
-class AsciiBannerManager:
-
-    """
-        Creates the ASCII banner for the provided library's version.
-
-        The figlet can be generated using 
-            - 'http://www.network-science.de/ascii/' (font: "banner3-D", width: 120)
-            - 'https://www.askapache.com/online-tools/figlet-ascii/'.
-    """
-
-    def __validate(self, version: str) -> None:
-        
-        """Validates the provided 'version'."""
-
-        if not version or not version.strip():
-            raise ValueError(_MessageCollection.provided_version_empty_whitespace())
-    def __create_figlet(self) -> tuple:
-        
-        """Returns a tuple containing the figlet and its width."""
-        
-        lines : list[str] = [
-            "'##::: ##:'##:::::'##::'######:::::'###::::'##::::'##::'######:::",
-            " ###:: ##: ##:'##: ##:'##... ##:::'## ##::: ##:::: ##:'##... ##::",
-            " ####: ##: ##: ##: ##: ##:::..:::'##:. ##:: ##:::: ##: ##:::..:::",
-            " ## ## ##: ##: ##: ##: ##:::::::'##:::. ##: ##:::: ##: ##::'####:",
-            " ##. ####: ##: ##: ##: ##::::::: #########:. ##:: ##:: ##::: ##::",
-            " ##:. ###: ##: ##: ##: ##::: ##: ##.... ##::. ## ##::: ##::: ##::",
-            " ##::. ##:. ###. ###::. ######:: ##:::: ##:::. ###::::. ######:::",
-            "..::::..:::...::...::::......:::..:::::..:::::...::::::......::::"
-        ]
-
-        return (os.linesep.join(lines), len(lines[0]))
-    def __create_frame(self, version: str, max_length: int) -> tuple:
-        
-        """Returns a tuple containing the frame of the figlet."""
-        
-        version_token : str = f"Version: {version}"
-        
-        margin_length : int = 5
-        total_length : int = max_length - len(version_token) - margin_length
-
-        top_line : str = "*" * max_length
-        bottom_line : str = f"{top_line[:total_length]}{version_token}{'*' * margin_length}"
-
-        return (top_line, bottom_line)
-
-    def create(self, version: str) -> str:
-        
-        """Creates the formatted ASCII banner with a versioned frame."""
-        
-        self.__validate(version)
-
-        figlet, max_length = self.__create_figlet()
-        top_line, bottom_line = self.__create_frame(version, max_length)
-
-        ascii_banner : str = os.linesep.join([
-            top_line,
-            figlet,
-            bottom_line,
-            ""
-        ])
-
-        return ascii_banner
-class CLIManager():
-
-    '''Collects all the logic related to the CLI management.'''
-
-    __ap_adapter : APAdapter
-    __ca_calculator : CommitAverageCalculator
-
-    def __init__(
-        self, 
-        ap_adapter : APAdapter = APAdapter(), 
-        ca_calculator : CommitAverageCalculator = CommitAverageCalculator()) -> None:
-
-        self.__ap_adapter = ap_adapter
-        self.__ca_calculator = ca_calculator
-
-    def run_and_log(self) -> None:
-
-        '''Calculates the average commit value and logs the result.'''
-
-        file_path, log_type = self.__ap_adapter.parse_args()
-        self.__ca_calculator.run_and_log(file_path = file_path, log_type = log_type)
 
 # MAIN
 if __name__ == "__main__":
-#    CLIManager().run_and_log()
-
-    manager = AsciiBannerManager()
-    print(manager.create(""))
+    pass
