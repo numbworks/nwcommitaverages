@@ -1,10 +1,11 @@
 '''
 A CLI application designed to calculate the average time between git commits.
 
-Alias: nwca
+Alias: nwcavg
 '''
 
 # GLOBAL MODULES
+import os
 import subprocess
 from argparse import ArgumentParser, Namespace
 from collections import defaultdict
@@ -456,6 +457,75 @@ class APAdapter():
         args : Namespace = parser.parse_args()
 
         return (args.file_path, args.logtype)
+class AsciiBannerManager:
+
+    """
+        Creates the ASCII banner for the provided library's version.
+
+        The figlet can be generated using 
+            - 'http://www.network-science.de/ascii/' (font: "banner3-D", width: 120)
+            - 'https://www.askapache.com/online-tools/figlet-ascii/'.
+    """
+
+    def __validate(self, version: str) -> None:
+        
+        """Validates the provided 'version'."""
+
+        if not version or not version.strip():
+            raise ValueError("The provided 'version' can't be empty or whitespace.")
+    def __create_figlet(self) -> dict:
+        
+        """Returns a dictionary containing the figlet and its width."""
+        
+        lines : list[str] = [
+            "'##::: ##:'##:::::'##::'######:::::'###::::'##::::'##::'######:::",
+            " ###:: ##: ##:'##: ##:'##... ##:::'## ##::: ##:::: ##:'##... ##::",
+            " ####: ##: ##: ##: ##: ##:::..:::'##:. ##:: ##:::: ##: ##:::..:::",
+            " ## ## ##: ##: ##: ##: ##:::::::'##:::. ##: ##:::: ##: ##::'####:",
+            " ##. ####: ##: ##: ##: ##::::::: #########:. ##:: ##:: ##::: ##::",
+            " ##:. ###: ##: ##: ##: ##::: ##: ##.... ##::. ## ##::: ##::: ##::",
+            " ##::. ##:. ###. ###::. ######:: ##:::: ##:::. ###::::. ######:::",
+            "..::::..:::...::...::::......:::..:::::..:::::...::::::......::::"
+        ]
+
+        return {
+            "figlet": os.linesep.join(lines),
+            "max_length": len(lines[0])
+        }
+    def __create_frame(self, version: str, max_length: int) -> dict:
+        
+        """Returns a dictionary containing the frame of the figlet."""
+        
+        version_token : str = f"Version: {version}"
+        
+        margin_length : int = 5
+        total_length : int = max_length - len(version_token) - margin_length
+
+        top_line : str = "*" * max_length
+        bottom_line : str = f"{top_line[:total_length]}{version_token}{'*' * margin_length}"
+
+        return {
+            "top_line": top_line,
+            "bottom_line": bottom_line
+        }
+
+    def create(self, version: str) -> str:
+        
+        """Creates the formatted ASCII banner with a versioned frame."""
+        
+        self.__validate(version)
+
+        figlet_dict : dict = self.__create_figlet()
+        frame_dict : dict = self.__create_frame(version, figlet_dict["max_length"])
+
+        ascii_banner = os.linesep.join([
+            frame_dict["top_line"],
+            figlet_dict["figlet"],
+            frame_dict["bottom_line"],
+            ""
+        ])
+
+        return ascii_banner
 class CLIManager():
 
     '''Collects all the logic related to the CLI management.'''
@@ -480,4 +550,7 @@ class CLIManager():
 
 # MAIN
 if __name__ == "__main__":
-    CLIManager().run_and_log()
+#    CLIManager().run_and_log()
+
+    manager = AsciiBannerManager()
+    print(manager.create("1.0.5"))
