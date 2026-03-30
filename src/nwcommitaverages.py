@@ -261,7 +261,7 @@ class CommitAverageCalculator():
         '''Extracts the avg_minutes from daily_statuses.'''
         
         return [status.avg_minutes for status in daily_statuses]
-    def __get_commit_items(self, file_path: Optional[str]) -> list[CommitItem]:
+    def __get_commit_items(self, folder_path: Optional[str]) -> list[CommitItem]:
 
         '''
             Retrieve a collection of CommitItem objects out of the git log.
@@ -272,14 +272,14 @@ class CommitAverageCalculator():
                 2023-08-21;1692637081;HEAD -> master, origin/master, origin/HEAD
                 ...
 
-            If "file_path" is None, "git log" is run against the current folder.
+            If "folder_path" is None, "git log" is run against the current folder.
             Otherwise, it's run against the provided folder ("git -C file_path log").
         '''
 
         git_command : list[str] = ["git", "log", "--pretty=format:%cs;%ct;%D", "--reverse"]
 
-        if file_path:
-            git_command = ["git", "-C", file_path, "log", "--pretty=format:%cs;%ct;%D", "--reverse"]
+        if folder_path:
+            git_command = ["git", "-C", folder_path, "log", "--pretty=format:%cs;%ct;%D", "--reverse"]
 
         output : CompletedProcess = subprocess.run(
             git_command,
@@ -461,11 +461,11 @@ class CommitAverageCalculator():
         else:
             raise Exception(_MessageCollection.provided_log_type_not_supported(log_type = log_type))
 
-    def run(self, file_path: Optional[str] = None) -> Summary:
+    def run(self, folder_path: Optional[str] = None) -> Summary:
 
         '''Returns a Summary or raises an Exception.'''
 
-        commit_items : list[CommitItem] = self.__get_commit_items(file_path)
+        commit_items : list[CommitItem] = self.__get_commit_items(folder_path)
         commit_items = self.__clean_commit_items(commit_items = commit_items)
 
         daily_statuses : list[DailyStatus] = self.__create_daily_statuses(commit_items = commit_items)
@@ -487,7 +487,7 @@ class CommitAverageCalculator():
         return summary
     def run_and_log(
         self, 
-        file_path: Optional[str] = None, 
+        folder_path: Optional[str] = None, 
         log_type : Optional[Literal[LOGTYPE.TABLE, LOGTYPE.DAILY, LOGTYPE.MONTHLY]] = None) -> None:
 
         '''Logs the outcome of the calculation or the Exception message.'''
@@ -497,7 +497,7 @@ class CommitAverageCalculator():
             ascii_banner : str = self.__ascii_banner_manager.create(PROJECT_VERSION)
             self.__logging_function(ascii_banner)
 
-            summary : Summary = self.run(file_path = file_path)
+            summary : Summary = self.run(folder_path = folder_path)
             self.__orchestrate_logging(summary = summary, log_type = log_type)
 
         except Exception as e:

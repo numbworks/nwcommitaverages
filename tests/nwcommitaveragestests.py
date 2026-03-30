@@ -250,7 +250,7 @@ class CommitAverageCalculatorTestCase(unittest.TestCase):
         # Act
         with patch("subprocess.run") as mocked_run:
             mocked_run.return_value = completed_process
-            actual : list[CommitItem] = CommitAverageCalculator()._CommitAverageCalculator__get_commit_items(file_path = None)  # type: ignore
+            actual : list[CommitItem] = CommitAverageCalculator()._CommitAverageCalculator__get_commit_items(folder_path = None)  # type: ignore
 
         # Assert
         self.assertEqual(len(actual), 3)
@@ -472,7 +472,7 @@ class CommitAverageCalculatorTestCase(unittest.TestCase):
 
         # Arrange
         ca_calculator : CommitAverageCalculator = CommitAverageCalculator()
-        file_path : Optional[str] = "/workspaces/nwsomething"
+        folder_path : Optional[str] = "/workspaces/nwsomething"
 
         with patch.object(ca_calculator, "_CommitAverageCalculator__get_commit_items", return_value=[]) as mocked_get_commit_items, \
              patch.object(ca_calculator, "_CommitAverageCalculator__clean_commit_items", return_value=[]) as mocked_clean_commit_items, \
@@ -480,10 +480,10 @@ class CommitAverageCalculatorTestCase(unittest.TestCase):
              patch.object(ca_calculator, "_CommitAverageCalculator__create_monthly_statuses", return_value=[]) as mocked_create_monthly_statuses:
 
             # Act
-            summary : Summary = ca_calculator.run(file_path = file_path)
+            summary : Summary = ca_calculator.run(folder_path = folder_path)
 
             # Assert
-            mocked_get_commit_items.assert_called_once_with(file_path)
+            mocked_get_commit_items.assert_called_once_with(folder_path)
             mocked_clean_commit_items.assert_called_once_with(commit_items = [])
             mocked_create_daily_statuses.assert_called_once_with(commit_items = [])
             mocked_create_monthly_statuses.assert_called_once_with(daily_statuses = [])
@@ -493,17 +493,17 @@ class CommitAverageCalculatorTestCase(unittest.TestCase):
 
         # Arrange
         ca_calculator : CommitAverageCalculator = CommitAverageCalculator(logging_function = lambda msg : None)
-        file_path : Optional[str] = "/workspaces/nwsomething"
+        folder_path : Optional[str] = "/workspaces/nwsomething"
         log_type : Optional[LOGTYPE] = LOGTYPE.TABLE
 
         with patch.object(ca_calculator, "run", return_value=Mock()) as mocked_run, \
              patch.object(ca_calculator, "_CommitAverageCalculator__orchestrate_logging") as mocked_orchestrate_logging:
 
             # Act
-            ca_calculator.run_and_log(file_path = file_path, log_type = log_type)
+            ca_calculator.run_and_log(folder_path = folder_path, log_type = log_type)
 
             # Assert
-            mocked_run.assert_called_once_with(file_path = file_path)
+            mocked_run.assert_called_once_with(folder_path = folder_path)
             mocked_orchestrate_logging.assert_called_once()
     def test_runandlog_shouldlogexceptionmessage_whenorchestrateloggingraisesexception(self) -> None:
 
@@ -523,7 +523,7 @@ class CommitAverageCalculatorTestCase(unittest.TestCase):
              patch.object(ca_calculator, "_CommitAverageCalculator__orchestrate_logging", side_effect = Exception(expected)) as mocked_orchestrate_logging:
 
             # Act
-            ca_calculator.run_and_log(file_path = file_path, log_type = log_type)
+            ca_calculator.run_and_log(folder_path = file_path, log_type = log_type)
 
             # Assert
             mocked_orchestrate_logging.assert_called_once_with(summary = summary, log_type = log_type)

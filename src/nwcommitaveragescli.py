@@ -6,29 +6,23 @@ Alias: nwcavg
 
 # GLOBAL MODULES
 from argparse import ArgumentParser, Namespace
-from typing import Literal, Optional, Tuple
+from typing import Final, Optional, Tuple
 
 # LOCAL/NW MODULES
-from nwcommitaverages import CommitAverageCalculator, LOGTYPE
+from nwcommitaverages import CommitAverageCalculator
+from setupinfo import CLI_NAME, CLI_DESCRIPTION
 
 # GENERIC CLASSES
 # CONSTANTS
 # STATIC CLASSES
-class _MessageCollectionAPFactory():
+class CLISTRING:
 
-    '''Collects all the messages used for logging and for the exceptions.'''
+    '''Collects all the CLI-related strings.'''
 
-    @staticmethod
-    def parser_description() -> str:
-        return "Calculates the average commit value and logs the result."
-    @staticmethod
-    def parser_file_path() -> str:
-        return "The file path to the Git repository for which the average commit value is calculated."
-    @staticmethod
-    def parser_logtype() -> str:
-        return f"The type of log ('{LOGTYPE.TABLE}' for a tabular overview, '{LOGTYPE.DAILY}' and '{LOGTYPE.MONTHLY}' for a list of statuses). The default is '{LOGTYPE.TABLE}'."
-class _MessageCollection(
-    _MessageCollectionAPFactory):
+    OPTION_FOLDERPATH_FLAGS : Final[list[str]] = ["--folder_path"]
+    OPTION_FOLDERPATH_REQUIRED : Final[bool] = False
+    OPTION_FOLDERPATH_HELP : Final[str] = "The file path to the Git repository for which the average commit value is calculated."
+class _MessageCollection():
 
     '''Collects all the messages used for logging and for the exceptions.'''
 
@@ -43,9 +37,12 @@ class APFactory():
 
         '''Creates a custom instance of argparse.ArgumentParser.'''
 
-        argument_parser : ArgumentParser = ArgumentParser(description = _MessageCollection.parser_description())
-        argument_parser.add_argument("--file_path", "-fp", required = False, help = _MessageCollection.parser_file_path())
-        argument_parser.add_argument("--logtype", "-lt", required = False, choices = [f"{LOGTYPE.TABLE}", f"{LOGTYPE.DAILY}", f"{LOGTYPE.MONTHLY}"], help = _MessageCollection.parser_logtype())
+        argument_parser : ArgumentParser = ArgumentParser(prog = CLI_NAME, description = CLI_DESCRIPTION)
+
+        argument_parser.add_argument(
+            *CLISTRING.OPTION_FOLDERPATH_FLAGS, 
+            required = CLISTRING.OPTION_FOLDERPATH_REQUIRED, 
+            help = CLISTRING.OPTION_FOLDERPATH_HELP)
 
         return argument_parser
 class APAdapter():
@@ -57,14 +54,14 @@ class APAdapter():
     def __init__(self, ap_factory : APFactory = APFactory()) -> None:
         self.__ap_factory = ap_factory
 
-    def parse_args(self) -> Tuple[Optional[str], Optional[Literal[LOGTYPE.TABLE, LOGTYPE.DAILY, LOGTYPE.MONTHLY]]]:
+    def parse_args(self) -> Optional[str]:
 
         '''Parses provided arguments.'''
 
         parser : ArgumentParser = self.__ap_factory.create()
         args : Namespace = parser.parse_args()
 
-        return (args.file_path, args.logtype)
+        return args.file_path
 class CLIManager():
 
     '''Collects all the logic related to the CLI management.'''
@@ -84,8 +81,8 @@ class CLIManager():
 
         '''Calculates the average commit value and logs the result.'''
 
-        file_path, log_type = self.__ap_adapter.parse_args()
-        self.__ca_calculator.run_and_log(file_path = file_path, log_type = log_type)
+        folder_path : Optional[str] = self.__ap_adapter.parse_args()
+        self.__ca_calculator.run_and_log(folder_path = folder_path)
 
 # MAIN
 if __name__ == "__main__":
