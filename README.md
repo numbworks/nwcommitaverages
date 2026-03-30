@@ -1,6 +1,8 @@
 # nwcommitaverages
 
-![codecoverage.svg](codecoverage.svg)
+| <sub>nwcommitaverages</sub> | <sub>nwcommitaveragescli</sub> |
+|---|---|
+|![codecoverage-nwcommitaverages.svg](codecoverage-nwcommitaverages.svg)|![codecoverage-nwcommitaveragescli.svg](codecoverage-nwcommitaveragescli.svg)|
 
 Contact: numbworks@gmail.com
 
@@ -8,7 +10,7 @@ Contact: numbworks@gmail.com
 
 From the documentation:
 
-> `nwcommitaverages` is a CLI application designed to calculate the average time between Git commits.
+> `nwcommitaverages` is an application designed to calculate the average time between Git commits.
 
 ## Getting started
 

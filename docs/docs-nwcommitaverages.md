@@ -6,10 +6,11 @@ Contact: numbworks@gmail.com
 | Date | Author | Description |
 |---|---|---|
 | 2025-05-19 | numbworks | Created. |
+| 2026-03-30 | numbworks | Last update. |
 
 ## Introduction
 
-`nwcommitaverages` is a CLI application designed to calculate the average time between Git commits.
+`nwcommitaverages` is an application designed to calculate the average time between Git commits.
 
 ## Getting Started
 
