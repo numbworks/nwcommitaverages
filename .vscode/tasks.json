@@ -4,37 +4,37 @@
         {
             "label": "nwcommitaverages: all-concise",
             "type": "shell",
-            "command": "cd /workspaces/nwcommitaverages/scripts && make -f makefile-nwcommitaverages all-concise",
+            "command": "cd ${workspaceFolder}/scripts && make -f makefile-nwcommitaverages all-concise",
             "problemMatcher": []
         },
         {
             "label": "nwcommitaveragescli: all-concise",
             "type": "shell",
-            "command": "cd /workspaces/nwcommitaverages/scripts && make -f makefile-nwcommitaveragescli all-concise",
+            "command": "cd ${workspaceFolder}/scripts && make -f makefile-nwcommitaveragescli all-concise",
             "problemMatcher": []
         },
         {
             "label": "nwcommitaverages: coverage-verbose",
             "type": "shell",
-            "command": "cd /workspaces/nwcommitaverages/scripts && make -f makefile-nwcommitaverages coverage-verbose",
+            "command": "cd ${workspaceFolder}/scripts && make -f makefile-nwcommitaverages coverage-verbose",
             "problemMatcher": []
         },
         {
             "label": "nwcommitaveragescli: coverage-verbose",
             "type": "shell",
-            "command": "cd /workspaces/nwcommitaverages/scripts && make -f makefile-nwcommitaveragescli coverage-verbose",
+            "command": "cd ${workspaceFolder}/scripts && make -f makefile-nwcommitaveragescli coverage-verbose",
             "problemMatcher": []
         },
         {
             "label": "nwcommitaverages: update-codecoverage",
             "type": "shell",
-            "command": "cd /workspaces/nwcommitaverages/scripts && make -f makefile-nwcommitaverages update-codecoverage",
+            "command": "cd ${workspaceFolder}/scripts && make -f makefile-nwcommitaverages update-codecoverage",
             "problemMatcher": []
         },
         {
             "label": "nwcommitaveragescli: update-codecoverage",
             "type": "shell",
-            "command": "cd /workspaces/nwcommitaverages/scripts && make -f makefile-nwcommitaveragescli update-codecoverage",
+            "command": "cd ${workspaceFolder}/scripts && make -f makefile-nwcommitaveragescli update-codecoverage",
             "problemMatcher": []
         }
     ]
