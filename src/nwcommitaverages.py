@@ -473,9 +473,9 @@ class AsciiBannerManager:
 
         if not version or not version.strip():
             raise ValueError("The provided 'version' can't be empty or whitespace.")
-    def __create_figlet(self) -> dict:
+    def __create_figlet(self) -> tuple:
         
-        """Returns a dictionary containing the figlet and its width."""
+        """Returns a tuple containing the figlet and its width."""
         
         lines : list[str] = [
             "'##::: ##:'##:::::'##::'######:::::'###::::'##::::'##::'######:::",
@@ -488,13 +488,10 @@ class AsciiBannerManager:
             "..::::..:::...::...::::......:::..:::::..:::::...::::::......::::"
         ]
 
-        return {
-            "figlet": os.linesep.join(lines),
-            "max_length": len(lines[0])
-        }
-    def __create_frame(self, version: str, max_length: int) -> dict:
+        return (os.linesep.join(lines), len(lines[0]))
+    def __create_frame(self, version: str, max_length: int) -> tuple:
         
-        """Returns a dictionary containing the frame of the figlet."""
+        """Returns a tuple containing the frame of the figlet."""
         
         version_token : str = f"Version: {version}"
         
@@ -504,10 +501,7 @@ class AsciiBannerManager:
         top_line : str = "*" * max_length
         bottom_line : str = f"{top_line[:total_length]}{version_token}{'*' * margin_length}"
 
-        return {
-            "top_line": top_line,
-            "bottom_line": bottom_line
-        }
+        return (top_line, bottom_line)
 
     def create(self, version: str) -> str:
         
@@ -515,13 +509,13 @@ class AsciiBannerManager:
         
         self.__validate(version)
 
-        figlet_dict : dict = self.__create_figlet()
-        frame_dict : dict = self.__create_frame(version, figlet_dict["max_length"])
+        figlet, max_length = self.__create_figlet()
+        top_line, bottom_line = self.__create_frame(version, max_length)
 
-        ascii_banner = os.linesep.join([
-            frame_dict["top_line"],
-            figlet_dict["figlet"],
-            frame_dict["bottom_line"],
+        ascii_banner : str = os.linesep.join([
+            top_line,
+            figlet,
+            bottom_line,
             ""
         ])
 
