@@ -1,11 +1,9 @@
 v1.1.0
 - Application:
-	- Feature: added support for AsciiBanner.
+	- Feature: added support for AsciiBanner, streamlined CLI structure.
 - Maintenance:
-	- Moved from a devcontainer to a named devcontainer.
-	- Added support for nwbuilders.
-	- Added support for setupinfo.
-	- Mirrored makefile to tasks.json.
+	- Devcontainer: moved from a devcontainer to a named devcontainer, upgraded pip (24.3.1 -> 26.0.1).
+	- Scripts: added support for nwbuilders and nwmakefiles.
 - Documentation:
 	- Feature: covers all the features available in v1.1.0.
 
