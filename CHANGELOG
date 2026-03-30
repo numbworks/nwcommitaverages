@@ -4,6 +4,8 @@ v1.1.0
 - Maintenance:
 	- Moved from a devcontainer to a named devcontainer.
 	- Added support for nwbuilders.
+	- Added support for setupinfo.
+	- Mirrored makefile to tasks.json.
 - Documentation:
 	- Feature: covers all the features available in v1.1.0.
 

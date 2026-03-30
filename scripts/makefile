@@ -5,7 +5,7 @@
 SHELL := /bin/bash
 ROOT_DIR := $(shell cd .. && pwd)
 MODULE_NAME = "nwcommitaverages"
-MODULE_VERSION = "1.0.0"
+MODULE_VERSION = "1.1.0"
 COVERAGE_THRESHOLD = 70
 
 # TARGETS (VERBOSE)
@@ -64,8 +64,8 @@ changelog-concise:
 	@value=$$(cat $(ROOT_DIR)/CHANGELOG | grep -c -e "v$(MODULE_VERSION)$$" -e "v$(MODULE_VERSION) - BREAKING CHANGES$$"); \
 	if [ $$value -eq 1 ]; then echo "[OK] $@: 'CHANGELOG' updated to current version!"; else echo "[WARNING] $@: 'CHANGELOG' not updated to current version!"; fi;
 setup-concise:
-	@value=$$(cat $(ROOT_DIR)/src/setup.py | grep -oP 'MODULE_VERSION\s*:\s*str\s*=\s*"\K[\d.]+'); \
-	if [ $$value == "$(MODULE_VERSION)" ]; then echo "[OK] $@: 'setup.py' updated to current version!"; else echo "[WARNING] $@: 'setup.py' not updated to current version!"; fi;
+	@value=$$(cat $(ROOT_DIR)/src/setupinfo.py | grep -oP 'MODULE_VERSION\s*:\s*str\s*=\s*"\K[\d.]+'); \
+	if [ $$value == "$(MODULE_VERSION)" ]; then echo "[OK] $@: 'setupinfo.py' updated to current version!"; else echo "[WARNING] $@: 'setupinfo.py' not updated to current version!"; fi;
 coverage-concise:
 	@cd $(ROOT_DIR)/tests/; \
 	coverage run -m unittest $(MODULE_NAME)tests.py > /dev/null 2>&1; \

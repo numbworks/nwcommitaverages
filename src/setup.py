@@ -1,12 +1,8 @@
 '''Contains packaging information about nwcommitaverages.py.'''
 
 # GLOBAL MODULES
+from setupinfo import MODULE_NAME, MODULE_VERSION
 from setuptools import setup
-
-# INFORMATION
-MODULE_ALIAS : str = "nwca"
-MODULE_NAME : str = "nwcommitaverages"
-MODULE_VERSION : str = "1.0.0"
 
 # SETUP
 if __name__ == "__main__":
