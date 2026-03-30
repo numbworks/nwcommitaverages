@@ -1,0 +1,107 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "all-concise",
+            "type": "shell",
+            "command": "cd /workspaces/nwcommitaverages/scripts && make -f makefile all-concise",
+            "problemMatcher": []
+        },
+        {
+            "label": "changelog-concise",
+            "type": "shell",
+            "command": "cd /workspaces/nwcommitaverages/scripts && make -f makefile changelog-concise",
+            "problemMatcher": []
+        },
+        {
+            "label": "codemetrics-concise",
+            "type": "shell",
+            "command": "cd /workspaces/nwcommitaverages/scripts && make -f makefile codemetrics-concise",
+            "problemMatcher": []
+        },
+        {
+            "label": "codemetrics-verbose",
+            "type": "shell",
+            "command": "cd /workspaces/nwcommitaverages/scripts && make -f makefile codemetrics-verbose",
+            "problemMatcher": []
+        },
+        {
+            "label": "compile-concise",
+            "type": "shell",
+            "command": "cd /workspaces/nwcommitaverages/scripts && make -f makefile compile-concise",
+            "problemMatcher": []
+        },
+        {
+            "label": "compile-verbose",
+            "type": "shell",
+            "command": "cd /workspaces/nwcommitaverages/scripts && make -f makefile compile-verbose",
+            "problemMatcher": []
+        },
+        {
+            "label": "create-classdiagram",
+            "type": "shell",
+            "command": "cd /workspaces/nwcommitaverages/scripts && make -f makefile create-classdiagram",
+            "problemMatcher": []
+        },
+        {
+            "label": "coverage-concise",
+            "type": "shell",
+            "command": "cd /workspaces/nwcommitaverages/scripts && make -f makefile coverage-concise",
+            "problemMatcher": []
+        },
+        {
+            "label": "coverage-verbose",
+            "type": "shell",
+            "command": "cd /workspaces/nwcommitaverages/scripts && make -f makefile coverage-verbose",
+            "problemMatcher": []
+        },
+        {
+            "label": "setup-concise",
+            "type": "shell",
+            "command": "cd /workspaces/nwcommitaverages/scripts && make -f makefile setup-concise",
+            "problemMatcher": []
+        },
+        {
+            "label": "tryinstall-concise",
+            "type": "shell",
+            "command": "cd /workspaces/nwcommitaverages/scripts && make -f makefile tryinstall-concise",
+            "problemMatcher": []
+        },
+        {
+            "label": "tryinstall-verbose",
+            "type": "shell",
+            "command": "cd /workspaces/nwcommitaverages/scripts && make -f makefile tryinstall-verbose",
+            "problemMatcher": []
+        },
+        {
+            "label": "type-concise",
+            "type": "shell",
+            "command": "cd /workspaces/nwcommitaverages/scripts && make -f makefile type-concise",
+            "problemMatcher": []
+        },
+        {
+            "label": "type-verbose",
+            "type": "shell",
+            "command": "cd /workspaces/nwcommitaverages/scripts && make -f makefile type-verbose",
+            "problemMatcher": []
+        },
+        {
+            "label": "unittest-concise",
+            "type": "shell",
+            "command": "cd /workspaces/nwcommitaverages/scripts && make -f makefile unittest-concise",
+            "problemMatcher": []
+        },
+        {
+            "label": "unittest-verbose",
+            "type": "shell",
+            "command": "cd /workspaces/nwcommitaverages/scripts && make -f makefile unittest-verbose",
+            "problemMatcher": []
+        },
+        {
+            "label": "update-codecoverage",
+            "type": "shell",
+            "command": "cd /workspaces/nwcommitaverages/scripts && make -f makefile update-codecoverage",
+            "problemMatcher": []
+        }
+    ]
+}
