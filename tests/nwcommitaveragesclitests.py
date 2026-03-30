@@ -2,13 +2,13 @@
 import unittest
 from argparse import ArgumentParser, Namespace
 from parameterized import parameterized
-from typing import Optional, Tuple
+from typing import Optional
 from unittest.mock import Mock, patch
 
 # LOCAL MODULES
 import sys, os
 sys.path.append(os.path.dirname(__file__).replace('tests', 'src'))
-from nwcommitaverages import LOGTYPE, CommitAverageCalculator
+from nwcommitaverages import CommitAverageCalculator
 from nwcommitaveragescli import APFactory, APAdapter, CLIManager, CLISTRING
 
 # SUPPORT METHODS
@@ -39,7 +39,7 @@ class APAdapterTestCase(unittest.TestCase):
 
         # Arrange
         argument_parser : Mock = Mock(spec = ArgumentParser)
-        argument_parser.parse_args.return_value = Namespace(file_path = folder_path)
+        argument_parser.parse_args.return_value = Namespace(folder_path = folder_path)
 
         ap_factory : Mock = Mock()
         ap_factory.create.return_value = argument_parser

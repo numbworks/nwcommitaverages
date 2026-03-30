@@ -61,7 +61,7 @@ class APAdapter():
         parser : ArgumentParser = self.__ap_factory.create()
         args : Namespace = parser.parse_args()
 
-        return args.file_path
+        return args.folder_path
 class CLIManager():
 
     '''Collects all the logic related to the CLI management.'''

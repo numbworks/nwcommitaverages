@@ -7,6 +7,7 @@ Alias: nwcavg
 # GLOBAL MODULES
 import os
 import subprocess
+from pathlib import Path
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -54,6 +55,9 @@ class _MessageCollectionCommitAverageCalculator():
     @staticmethod
     def provided_log_type_not_supported(log_type : LOGTYPE) -> str:
         return f"The provided 'log_type' is not supported ('{log_type}')."
+    @staticmethod
+    def field_equals_to(name: str, value: str) -> str:
+        return f"{name}:'{value}'"
 class _MessageCollection(
     _MessageCollectionAsciiBannerManager,
     _MessageCollectionCommitAverageCalculator):
@@ -445,6 +449,24 @@ class CommitAverageCalculator():
 
         for item in items :
             self.__logging_function(item)
+    def __log_ascii_banner(self):
+
+        """Logs the ascii banner."""
+
+        ascii_banner : str = self.__ascii_banner_manager.create(PROJECT_VERSION)
+
+        self.__logging_function("")
+        self.__logging_function(ascii_banner)    
+    def __log_folder_path(self, folder_path : Optional[str]):
+
+        """Logs the folder_path."""
+
+        if (folder_path):
+            self.__logging_function(_MessageCollection.field_equals_to("Folder", folder_path))
+        else:
+            self.__logging_function(_MessageCollection.field_equals_to("Folder", str(Path.cwd())))
+
+        self.__logging_function("")    
     def __orchestrate_logging(self, summary : Summary, log_type : Optional[Literal[LOGTYPE.TABLE, LOGTYPE.DAILY, LOGTYPE.MONTHLY]]) -> None:
 
         '''Orchestrate summary logging according to log_type.'''
@@ -494,8 +516,8 @@ class CommitAverageCalculator():
 
         try:
 
-            ascii_banner : str = self.__ascii_banner_manager.create(PROJECT_VERSION)
-            self.__logging_function(ascii_banner)
+            self.__log_ascii_banner()
+            self.__log_folder_path(folder_path)
 
             summary : Summary = self.run(folder_path = folder_path)
             self.__orchestrate_logging(summary = summary, log_type = log_type)
