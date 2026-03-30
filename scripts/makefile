@@ -51,7 +51,7 @@ makefile-info:
 	@echo "MODULE_NAME: $(MODULE_NAME)"; \
 	echo "MODULE_VERSION: $(MODULE_VERSION)"; \
 	echo "COVERAGE_THRESHOLD: $(COVERAGE_THRESHOLD)%"
-setup-concise:
+setupinfo-concise:
 	@value=$$(cat $(ROOT_DIR)/src/setupinfo.py | grep -oP 'MODULE_VERSION\s*:\s*str\s*=\s*"\K[\d.]+'); \
 	if [ $$value == "$(MODULE_VERSION)" ]; then echo "[OK] $@: 'setupinfo.py' updated to current version!"; else echo "[WARNING] $@: 'setupinfo.py' not updated to current version!"; fi;
 tryinstall-concise:

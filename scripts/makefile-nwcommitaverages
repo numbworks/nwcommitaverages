@@ -8,7 +8,7 @@ MODULE_NAME = "nwcommitaverages"
 	codemetrics-concise \
 	compile-concise \
 	coverage-concise \
-	setup-concise \
+	setupinfo-concise \
 	tryinstall-concise \
 	type-concise \
 	unittest-concise \
@@ -17,10 +17,11 @@ MODULE_NAME = "nwcommitaverages"
 all-concise: \
 	clear \
 	makefile-info \
+	changelog-concise \
 	codemetrics-concise \
 	compile-concise \
 	coverage-concise \
-	setup-concise \
+	setupinfo-concise \
 	tryinstall-concise \
 	type-concise \
 	unittest-concise

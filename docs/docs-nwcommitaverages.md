@@ -83,11 +83,11 @@ To calculate the total unit test coverage in Visual Studio Code (while still con
 
 4. Done!
 
-## See Also - `nwmakefiler`
+## See Also: `nwmakefiles`
 
-This project includes `nwmakefiler`, which is documented here:
+This project includes portions of the `nwmakefiles` project, which is documented here:
 
-- [docs-nwmakefiler.md](Includes-nwbuilds/docs-nwmakefiler.md)
+- [docs-nwmakefiles.md](SeeAlso-nwmakefiles/docs-nwmakefiles.md)
 
 ## Markdown Toolset
 
