@@ -57,6 +57,10 @@ class _MessageCollection():
     def parser_logtype() -> str:
         return f"The type of log ('{LOGTYPE.TABLE}' for a tabular overview, '{LOGTYPE.DAILY}' and '{LOGTYPE.MONTHLY}' for a list of statuses). The default is '{LOGTYPE.TABLE}'."
 
+    @staticmethod
+    def provided_version_empty_whitespace() -> str:
+        return "The provided 'version' is empty or whitespace."
+
 # CLASSES
 @dataclass(frozen = True)
 class CommitItem():
@@ -472,7 +476,7 @@ class AsciiBannerManager:
         """Validates the provided 'version'."""
 
         if not version or not version.strip():
-            raise ValueError("The provided 'version' can't be empty or whitespace.")
+            raise ValueError(_MessageCollection.provided_version_empty_whitespace())
     def __create_figlet(self) -> tuple:
         
         """Returns a tuple containing the figlet and its width."""
@@ -547,4 +551,4 @@ if __name__ == "__main__":
 #    CLIManager().run_and_log()
 
     manager = AsciiBannerManager()
-    print(manager.create("1.0.5"))
+    print(manager.create(""))
