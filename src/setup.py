@@ -1,18 +1,18 @@
-'''Contains packaging information about nwcommitaverages.py.'''
+'''Contains packaging instructions.'''
 
 # GLOBAL MODULES
-from setupinfo import MODULE_NAME, MODULE_VERSION
+from setupinfo import PROJECT_VERSION, PROJECT_AUTHOR, PROJECT_ALIAS, PROJECT_URL, LIBRARY_NAME, LIBRARY_DESCRIPTION
 from setuptools import setup
 
 # SETUP
 if __name__ == "__main__":
     setup(
-        name = MODULE_NAME,
-        version = MODULE_VERSION,
-        description = "A CLI application designed to calculate the average time between Git commits.",
-        author = "numbworks",
-        url = f"https://github.com/numbworks/{MODULE_NAME}",
-        py_modules = [ MODULE_NAME ],
+        name = LIBRARY_NAME,
+        version = PROJECT_VERSION,
+        description = LIBRARY_DESCRIPTION,
+        author = PROJECT_AUTHOR,
+        url = PROJECT_URL,
+        py_modules = [ LIBRARY_NAME ],
         install_requires = [ 
 			"tabulate>=0.9.0"
 		],

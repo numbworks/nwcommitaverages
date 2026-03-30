@@ -1,10 +1,10 @@
 SHELL := /bin/bash
 ROOT_DIR := $(shell cd .. && pwd)
-MODULE_VERSION = "1.1.0"
+PROJECT_VERSION = "1.1.0"
 COVERAGE_THRESHOLD = 70
 
 changelog-concise:
-	@value=$$(cat $(ROOT_DIR)/CHANGELOG | grep -c -e "v$(MODULE_VERSION)$$" -e "v$(MODULE_VERSION) - BREAKING CHANGES$$"); \
+	@value=$$(cat $(ROOT_DIR)/CHANGELOG | grep -c -e "v$(PROJECT_VERSION)$$" -e "v$(PROJECT_VERSION) - BREAKING CHANGES$$"); \
 	if [ $$value -eq 1 ]; then echo "[OK] $@: 'CHANGELOG' updated to current version!"; else echo "[WARNING] $@: 'CHANGELOG' not updated to current version!"; fi;
 clear:
 	@clear
@@ -49,15 +49,15 @@ create-classdiagram:
 	mv $$md_file $$final_file
 makefile-info:
 	@echo "MODULE_NAME: $(MODULE_NAME)"; \
-	echo "MODULE_VERSION: $(MODULE_VERSION)"; \
+	echo "PROJECT_VERSION: $(PROJECT_VERSION)"; \
 	echo "COVERAGE_THRESHOLD: $(COVERAGE_THRESHOLD)%"
 setupinfo-concise:
-	@value=$$(cat $(ROOT_DIR)/src/setupinfo.py | grep -oP 'MODULE_VERSION\s*:\s*str\s*=\s*"\K[\d.]+'); \
-	if [ $$value == "$(MODULE_VERSION)" ]; then echo "[OK] $@: 'setupinfo.py' updated to current version!"; else echo "[WARNING] $@: 'setupinfo.py' not updated to current version!"; fi;
+	@value=$$(cat $(ROOT_DIR)/src/setupinfo.py | grep -oP 'PROJECT_VERSION\s*:\s*str\s*=\s*"\K[\d.]+'); \
+	if [ $$value == "$(PROJECT_VERSION)" ]; then echo "[OK] $@: 'setupinfo.py' updated to current version!"; else echo "[WARNING] $@: 'setupinfo.py' not updated to current version!"; fi;
 tryinstall-concise:
 	@value=$$($(MAKE) tryinstall-verbose MODULE_NAME=$(MODULE_NAME) 2>&1); \
 	last_chars=$$(echo "$$value" | tail -c 100); \
-	if [[ "$$last_chars" == *"Version: $(MODULE_VERSION)"* ]]; then echo "[OK] $@: installation process works."; else echo "[WARNING] $@: installation process fails!"; fi;
+	if [[ "$$last_chars" == *"Version: $(PROJECT_VERSION)"* ]]; then echo "[OK] $@: installation process works."; else echo "[WARNING] $@: installation process fails!"; fi;
 tryinstall-verbose:
 	@clear; \
 	cd /home; \

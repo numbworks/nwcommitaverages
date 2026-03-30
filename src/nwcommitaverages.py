@@ -16,7 +16,7 @@ from tabulate import tabulate
 from typing import Callable, Literal, Optional
 
 # LOCAL MODULES
-from setupinfo import MODULE_VERSION
+from setupinfo import PROJECT_VERSION
 
 # CONSTANTS
 class LOGTYPE(StrEnum):
@@ -494,7 +494,7 @@ class CommitAverageCalculator():
 
         try:
 
-            ascii_banner : str = self.__ascii_banner_manager.create(MODULE_VERSION)
+            ascii_banner : str = self.__ascii_banner_manager.create(PROJECT_VERSION)
             self.__logging_function(ascii_banner)
 
             summary : Summary = self.run(file_path = file_path)

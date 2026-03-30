@@ -1,6 +1,11 @@
-'''Contains packaging information about nwcommitaverages.py.'''
+'''Contains project information.'''
 
 # INFORMATION
-MODULE_ALIAS : str = "nwcavg"
-MODULE_NAME : str = "nwcommitaverages"
-MODULE_VERSION : str = "1.1.0"
+PROJECT_VERSION : str = "1.1.0"
+PROJECT_AUTHOR : str = "numbworks"
+PROJECT_ALIAS : str = "nwcavg"
+
+LIBRARY_NAME : str = "nwcommitaverages"
+LIBRARY_DESCRIPTION : str = "A library designed to calculate the average time between Git commits."
+
+PROJECT_URL : str = f"https://github.com/{PROJECT_AUTHOR}/{LIBRARY_NAME}"
