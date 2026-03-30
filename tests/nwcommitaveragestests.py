@@ -1,18 +1,15 @@
 # GLOBAL MODULES
 import unittest
-from argparse import ArgumentParser, Namespace
 from datetime import datetime, timezone
-from parameterized import parameterized
 from subprocess import CompletedProcess
-from tabulate import tabulate
-from typing import Callable, Literal, Optional, Tuple
+from typing import Callable, Optional
 from unittest.mock import Mock, patch
 
 # LOCAL MODULES
 import sys, os
 sys.path.append(os.path.dirname(__file__).replace('tests', 'src'))
-from nwcommitaverages import LOGTYPE, _MessageCollection, APFactory, APAdapter, AsciiBannerManager, CLIManager, CommitAverageCalculator, CommitItem, MonthlyStatus, Summary
-from nwcommitaverages import DailyStatus
+from nwcommitaverages import LOGTYPE, _MessageCollection, AsciiBannerManager, CommitAverageCalculator
+from nwcommitaverages import DailyStatus, CommitItem, MonthlyStatus, Summary
 
 # SUPPORT METHODS
 # TEST CLASSES
@@ -39,82 +36,76 @@ class MessageCollectionTestCase(unittest.TestCase):
 
         # Assert
         self.assertEqual(expected, actual)
-    def test_parserdescription_shouldreturnexpectedmessage_wheninvoked(self):
+class AsciiBannerManagerTestCase(unittest.TestCase):
+
+    def test_validate_shouldraisevalueerror_whenversionisnone(self) -> None:
 
         # Arrange
-        expected : str = "Calculates the average commit value and logs the result."
+        # Act, Assert
+        with self.assertRaises(ValueError) as context:
+            AsciiBannerManager()._AsciiBannerManager__validate(version = None) # type: ignore
 
-        # Act
-        actual : str = _MessageCollection.parser_description()
-
-        # Assert
-        self.assertEqual(expected, actual)
-    def test_parserfilepath_shouldreturnexpectedmessage_wheninvoked(self):
+        self.assertEqual(_MessageCollection.provided_version_empty_whitespace(), str(context.exception))
+    def test_validate_shouldraisevalueerror_whenversioniswhitespace(self) -> None:
 
         # Arrange
-        expected : str = "The file path to the Git repository for which the average commit value is calculated."
+        version : str = " "
 
-        # Act
-        actual : str = _MessageCollection.parser_file_path()
+        # Act, Assert
+        with self.assertRaises(ValueError) as context:
+            AsciiBannerManager()._AsciiBannerManager__validate(version = version) # type: ignore
 
-        # Assert
-        self.assertEqual(expected, actual)
-    def test_parserlogtype_shouldreturnexpectedmessage_wheninvoked(self):
-
-        # Arrange
-        expected : str = "The type of log ('table' for a tabular overview, 'daily' and 'monthly' for a list of statuses). The default is 'table'."
-
-        # Act
-        actual : str = _MessageCollection.parser_logtype()
-
-        # Assert
-        self.assertEqual(expected, actual)
-class APFactoryTestCase(unittest.TestCase):
-
-    def test_create_shouldreturnexpectedargumentparser_wheninvoked(self) -> None:
+        self.assertEqual(_MessageCollection.provided_version_empty_whitespace(), str(context.exception))
+    def test_createfiglet_shouldreturnexpectedmaxlength_wheninvoked(self) -> None:
 
         # Arrange
+        expected : int = 65
+
         # Act
-        argument_parser : ArgumentParser = APFactory().create()
+        _, max_length = AsciiBannerManager()._AsciiBannerManager__create_figlet() # type: ignore
 
         # Assert
-        self.assertIsInstance(argument_parser, ArgumentParser)
-
-        arguments : list[str] = []
-        for action in argument_parser._actions:
-            arguments.extend(action.option_strings)
-
-        self.assertIn("--file_path", arguments)
-        self.assertIn("-fp", arguments)
-        self.assertIn("--logtype", arguments)
-        self.assertIn("-lt", arguments)
-class APAdapterTestCase(unittest.TestCase):
-
-    @parameterized.expand([
-        ("/workspaces/nwsomething", LOGTYPE.DAILY, ("/workspaces/nwsomething", LOGTYPE.DAILY)),
-        ("/workspaces/nwsomething", None, ("/workspaces/nwsomething", None)),
-        (None, None, (None, None))
-    ])
-    def test_parseargs_shouldreturnexpectedtuple_wheninvoked(
-        self,
-        file_path : Optional[str],
-        logtype : Optional[LOGTYPE],
-        expected : Tuple[Optional[str], Optional[LOGTYPE]]
-    ) -> None:
+        self.assertEqual(expected, max_length)
+    def test_createframe_shouldreturnexpectedtuple_wheninvoked(self) -> None:
 
         # Arrange
-        argument_parser : Mock = Mock(spec = ArgumentParser)
-        argument_parser.parse_args.return_value = Namespace(file_path = file_path, logtype = logtype)
-
-        ap_factory : Mock = Mock()
-        ap_factory.create.return_value = argument_parser
+        version : str = "1.0.5"
+        max_length : int = 65
+        
+        expected_top_line : str = "*" * 65
+        expected_bottom_line : str = "*" * 46 + "Version: 1.0.5" + "*" * 5
 
         # Act
-        ap_adapter : APAdapter = APAdapter(ap_factory = ap_factory)
-        actual : Tuple[Optional[str], Optional[LOGTYPE]] = ap_adapter.parse_args()
+        top_line, bottom_line = AsciiBannerManager()._AsciiBannerManager__create_frame(version = version, max_length = max_length) # type: ignore
 
         # Assert
-        self.assertEqual(expected, actual)
+        self.assertEqual(expected_top_line, top_line)
+        self.assertEqual(expected_bottom_line, bottom_line)
+    def test_create_shouldcallexpectedprivatemethodsandreturnbanner_wheninvoked(self) -> None:
+
+        # Arrange
+        ascii_banner_manager : AsciiBannerManager = AsciiBannerManager()
+        version : str = "1.0.5"
+        max_lenght : int = 65
+        
+        figlet_tpl : tuple = ("ascii_art", max_lenght)
+        frame_tpl : tuple = ("top_border", "bottom_border")
+
+        with patch.object(ascii_banner_manager, "_AsciiBannerManager__validate") as mocked_validate, \
+                patch.object(ascii_banner_manager, "_AsciiBannerManager__create_figlet", return_value = figlet_tpl) as mocked_create_figlet, \
+                patch.object(ascii_banner_manager, "_AsciiBannerManager__create_frame", return_value = frame_tpl) as mocked_create_frame:
+
+            # Act
+            actual : str = ascii_banner_manager.create(version = version)
+
+            # Assert
+            mocked_validate.assert_called_once_with(version)
+            mocked_create_figlet.assert_called_once()
+            mocked_create_frame.assert_called_once_with(version, max_lenght)
+
+            self.assertIn("top_border", actual)
+            self.assertIn("ascii_art", actual)
+            self.assertIn("bottom_border", actual)
 class CommitAverageCalculatorTestCase(unittest.TestCase):
 
     def test_createtimestampdt_shouldreturnexpecteddatetimetz_wheninvoked(self) -> None:
@@ -501,7 +492,7 @@ class CommitAverageCalculatorTestCase(unittest.TestCase):
     def test_runandlog_shouldcallrunandorchestralogging_wheninvoked(self) -> None:
 
         # Arrange
-        ca_calculator : CommitAverageCalculator = CommitAverageCalculator()
+        ca_calculator : CommitAverageCalculator = CommitAverageCalculator(logging_function = lambda msg : None)
         file_path : Optional[str] = "/workspaces/nwsomething"
         log_type : Optional[LOGTYPE] = LOGTYPE.TABLE
 
@@ -526,113 +517,17 @@ class CommitAverageCalculatorTestCase(unittest.TestCase):
         log_type : Optional[LOGTYPE] = LOGTYPE.TABLE
         summary : Mock = Mock(spec = Summary)
         
-        expected : list[str] = [
-            "The provided 'log_type' is not supported ('...')."
-        ]
+        expected : str = "The provided 'log_type' is not supported ('...')."
 
         with patch.object(ca_calculator, "run", return_value = summary) as mocked_run, \
-             patch.object(ca_calculator, "_CommitAverageCalculator__orchestrate_logging", side_effect = Exception(expected[0])) as mocked_orchestrate_logging:
+             patch.object(ca_calculator, "_CommitAverageCalculator__orchestrate_logging", side_effect = Exception(expected)) as mocked_orchestrate_logging:
 
             # Act
             ca_calculator.run_and_log(file_path = file_path, log_type = log_type)
 
             # Assert
             mocked_orchestrate_logging.assert_called_once_with(summary = summary, log_type = log_type)
-            self.assertEqual(expected, actual)
-class AsciiBannerManagerTestCase(unittest.TestCase):
-
-    def test_validate_shouldraisevalueerror_whenversionisnone(self) -> None:
-
-        # Arrange
-        # Act, Assert
-        with self.assertRaises(ValueError) as context:
-            AsciiBannerManager()._AsciiBannerManager__validate(version = None) # type: ignore
-
-        self.assertEqual(_MessageCollection.provided_version_empty_whitespace(), str(context.exception))
-    def test_validate_shouldraisevalueerror_whenversioniswhitespace(self) -> None:
-
-        # Arrange
-        version : str = " "
-
-        # Act, Assert
-        with self.assertRaises(ValueError) as context:
-            AsciiBannerManager()._AsciiBannerManager__validate(version = version) # type: ignore
-
-        self.assertEqual(_MessageCollection.provided_version_empty_whitespace(), str(context.exception))
-    def test_createfiglet_shouldreturnexpectedmaxlength_wheninvoked(self) -> None:
-
-        # Arrange
-        expected : int = 65
-
-        # Act
-        _, max_length = AsciiBannerManager()._AsciiBannerManager__create_figlet() # type: ignore
-
-        # Assert
-        self.assertEqual(expected, max_length)
-    def test_createframe_shouldreturnexpectedtuple_wheninvoked(self) -> None:
-
-        # Arrange
-        version : str = "1.0.5"
-        max_length : int = 65
-        
-        expected_top_line : str = "*" * 65
-        expected_bottom_line : str = "*" * 46 + "Version: 1.0.5" + "*" * 5
-
-        # Act
-        top_line, bottom_line = AsciiBannerManager()._AsciiBannerManager__create_frame(version = version, max_length = max_length) # type: ignore
-
-        # Assert
-        self.assertEqual(expected_top_line, top_line)
-        self.assertEqual(expected_bottom_line, bottom_line)
-    def test_create_shouldcallexpectedprivatemethodsandreturnbanner_wheninvoked(self) -> None:
-
-        # Arrange
-        ascii_banner_manager : AsciiBannerManager = AsciiBannerManager()
-        version : str = "1.0.5"
-        max_lenght : int = 65
-        
-        figlet_tpl : tuple = ("ascii_art", max_lenght)
-        frame_tpl : tuple = ("top_border", "bottom_border")
-
-        with patch.object(ascii_banner_manager, "_AsciiBannerManager__validate") as validate, \
-                patch.object(ascii_banner_manager, "_AsciiBannerManager__create_figlet", return_value = figlet_tpl) as create_figlet, \
-                patch.object(ascii_banner_manager, "_AsciiBannerManager__create_frame", return_value = frame_tpl) as create_frame:
-
-            # Act
-            actual : str = ascii_banner_manager.create(version = version)
-
-            # Assert
-            validate.assert_called_once_with(version)
-            create_figlet.assert_called_once()
-            create_frame.assert_called_once_with(version, max_lenght)
-
-            self.assertIn("top_border", actual)
-            self.assertIn("ascii_art", actual)
-            self.assertIn("bottom_border", actual)
-class CLIManagerTestCase(unittest.TestCase):
-
-    @parameterized.expand([
-        ("/workspaces/nwsomething", LOGTYPE.TABLE),
-        (None, None)
-    ])
-    def test_runandlog_shouldcallcalculatorwithargs_wheninvoked(self, file_path : Optional[str], log_type : Optional[LOGTYPE]) -> None:
-
-        # Arrange
-        ap_adapter : APAdapter = Mock()
-        ap_adapter.parse_args.return_value = (file_path, log_type)
-
-        ca_calculator : CommitAverageCalculator = Mock()
-
-        cli_manager : CLIManager = CLIManager(
-            ap_adapter = ap_adapter,
-            ca_calculator = ca_calculator
-        )
-
-        # Act
-        cli_manager.run_and_log()
-
-        # Assert
-        ca_calculator.run_and_log.assert_called_once_with(file_path = file_path, log_type = log_type)
+            self.assertEqual(expected, actual[-1])
 
 # MAIN
 if __name__ == "__main__":
