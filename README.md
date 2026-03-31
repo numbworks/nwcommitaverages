@@ -12,9 +12,12 @@ From the documentation:
 
 > `nwcommitaverages` is an application designed to calculate the average time between Git commits.
 
+> `nwcommitaveragescli` is a command-line application built on the top of `nwcommitaverages`.
+
 ## Getting started
 
-- [Documentation](docs/docs-nwcommitaverages.md)
+- [Documentation (nwcommitaverages)](docs/docs-nwcommitaverages.md)
+- [Documentation (nwcommitaveragescli)](docs/docs-nwcommitaveragescli.md)
 
 ## Other links
 
