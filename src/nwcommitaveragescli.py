@@ -21,7 +21,7 @@ class CLISTRING:
 
     OPTION_FOLDERPATH_FLAGS : Final[list[str]] = ["--folder_path"]
     OPTION_FOLDERPATH_REQUIRED : Final[bool] = False
-    OPTION_FOLDERPATH_HELP : Final[str] = "The file path to the Git repository for which the average commit value is calculated."
+    OPTION_FOLDERPATH_HELP : Final[str] = "The path to the Git repository folder for which the average commit value is calculated."
 class _MessageCollection():
 
     '''Collects all the messages used for logging and for the exceptions.'''
