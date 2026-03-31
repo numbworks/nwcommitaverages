@@ -1,5 +1,5 @@
 SHELL := /bin/bash
-ROOT_DIR := $(shell cd .. && pwd)
+ROOT_DIR := $(shell cd .. && cd .. && pwd)
 PROJECT_VERSION = "2.0.0"
 COVERAGE_THRESHOLD = 70
 

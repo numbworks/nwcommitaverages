@@ -28,10 +28,11 @@ An example of the structure for an application that consists of a library and a 
 
 ```
 ...
-+---scripts
-|   |   makefile
-|   |   makefile-<library_name>
-|   |   makefile-<cli_name>
+/scripts/
+└── nwmakefiles/
+    ├── makefile
+    ├── makefile-<library_name>
+    └── makefile-<cli_name>
 ...
 ```
 
@@ -43,12 +44,12 @@ An example of the structure for an application that consists of a library and a 
 4. Run the following commands:
 
     ```sh
-    cd /workspaces/<project_name>/scripts
+    cd /workspaces/<project_name>/scripts/nwmakefiles
     make -f makefile-<library_name> <target_name>
     ```
 
     ```sh
-    cd /workspaces/<project_name>/scripts
+    cd /workspaces/<project_name>/scripts/nwmakefiles
     make -f makefile-<cli_name> <target_name>
     ```
 
