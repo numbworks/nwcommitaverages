@@ -1,7 +1,7 @@
 '''Contains packaging instructions.'''
 
 # GLOBAL MODULES
-from setupinfo import PROJECT_VERSION, PROJECT_AUTHOR, PROJECT_ALIAS, PROJECT_URL, LIBRARY_NAME, LIBRARY_DESCRIPTION
+from setupinfo import CLI_NAME, PROJECT_VERSION, PROJECT_AUTHOR, PROJECT_URL, LIBRARY_NAME, LIBRARY_DESCRIPTION
 from setuptools import setup
 
 # SETUP
@@ -12,10 +12,15 @@ if __name__ == "__main__":
         description = LIBRARY_DESCRIPTION,
         author = PROJECT_AUTHOR,
         url = PROJECT_URL,
-        py_modules = [ LIBRARY_NAME ],
+        py_modules = [ LIBRARY_NAME, CLI_NAME, "setupinfo" ],
         install_requires = [ 
 			"tabulate>=0.9.0"
 		],
         python_requires = ">=3.12",
-        license = "MIT"
+        license = "MIT",
+        entry_points = {
+            'console_scripts': [
+                f'{CLI_NAME} = {CLI_NAME}:main',
+            ],
+        }
     )

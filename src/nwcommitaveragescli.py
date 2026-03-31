@@ -85,5 +85,7 @@ class CLIManager():
         self.__ca_calculator.run_and_log(folder_path = folder_path)
 
 # MAIN
+def main(): CLIManager().run_and_log()
+
 if __name__ == "__main__":
-    CLIManager().run_and_log()
+    main()
