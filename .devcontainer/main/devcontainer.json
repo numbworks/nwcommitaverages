@@ -4,6 +4,7 @@
 	"initializeCommand": "docker build -f .devcontainer/main/Dockerfile -t nwcommitaverages:main .",
 	"runArgs": ["--name", "nwcommitaverages-main"],
 	"containerEnv": {
+		"TZ": "Europe/Stockholm",
 		"DEVCONTAINER_NAME": "main"
 	},
 	"customizations": {
