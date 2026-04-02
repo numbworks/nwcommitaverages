@@ -83,6 +83,10 @@ To calculate the total unit test coverage in Visual Studio Code (while still con
 
 4. Done!
 
+## Pre-Requisites
+
+In order to work, this library requires to be run against a local Git repository and that Git itself is installed on the machine.
+
 ## See Also: `nwmakefiles`
 
 This project includes portions of the `nwmakefiles` project, which is documented here:
