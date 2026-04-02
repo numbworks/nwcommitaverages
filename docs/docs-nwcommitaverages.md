@@ -89,6 +89,12 @@ This project includes portions of the `nwmakefiles` project, which is documented
 
 - [docs-nwmakefiles.md](SeeAlso-nwmakefiles/docs-nwmakefiles.md)
 
+## See Also: `nwbuilders`
+
+This project includes portions of the `nwbuilders` project, which is documented here:
+
+- [docs-nwbuilders.md](SeeAlso-nwbuilders/docs-nwbuilders.md)
+
 ## Markdown Toolset
 
 Suggested toolset to view and edit this Markdown file:
