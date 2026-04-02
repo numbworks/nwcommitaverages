@@ -1,9 +1,9 @@
 v2.0.0
 - Application:
-	- Feature: added support for AsciiBanner, streamlined CLI structure.
+	- Feature: added support for AsciiBanner, streamlined command-line interface.
 - Maintenance:
-	- Devcontainer: moved from a devcontainer to a named devcontainer, upgraded pip (24.3.1 -> 26.0.1).
-	- Scripts: added support for nwbuilders and nwmakefiles.
+	- Moved from a devcontainer to a named devcontainer, upgraded pip (24.3.1 -> 26.0.1), added timezone support.
+	- Added support for nwbuilders and nwmakefiles.
 - Documentation:
 	- Feature: covers all the features available in v1.1.0.
 
