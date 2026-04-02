@@ -1,0 +1,23 @@
+{
+	"name": "main",
+	"image": "nwcommitaverages:main",
+	"initializeCommand": "docker build -f .devcontainer/main/Dockerfile -t nwcommitaverages:main .",
+	"runArgs": ["--name", "nwcommitaverages-main"],
+	"containerEnv": {
+		"TZ": "Europe/Stockholm",
+		"DEVCONTAINER_NAME": "main"
+	},
+	"customizations": {
+		"vscode": {
+			"settings": {},
+			"extensions": [
+				"ms-python.python",
+				"ms-python.vscode-pylance",
+				"ms-toolsai.jupyter",
+				"ms-toolsai.datawrangler",
+				"shd101wyy.markdown-preview-enhanced"
+			]
+		}
+	},
+	"mounts": []
+}

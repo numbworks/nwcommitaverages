@@ -1,25 +1,26 @@
-'''Contains packaging information about nwcommitaverages.py.'''
+'''Contains packaging instructions.'''
 
 # GLOBAL MODULES
+from setupinfo import CLI_NAME, PROJECT_VERSION, PROJECT_AUTHOR, PROJECT_URL, LIBRARY_NAME, LIBRARY_DESCRIPTION
 from setuptools import setup
-
-# INFORMATION
-MODULE_ALIAS : str = "nwca"
-MODULE_NAME : str = "nwcommitaverages"
-MODULE_VERSION : str = "1.0.0"
 
 # SETUP
 if __name__ == "__main__":
     setup(
-        name = MODULE_NAME,
-        version = MODULE_VERSION,
-        description = "A CLI application designed to calculate the average time between Git commits.",
-        author = "numbworks",
-        url = f"https://github.com/numbworks/{MODULE_NAME}",
-        py_modules = [ MODULE_NAME ],
+        name = LIBRARY_NAME,
+        version = PROJECT_VERSION,
+        description = LIBRARY_DESCRIPTION,
+        author = PROJECT_AUTHOR,
+        url = PROJECT_URL,
+        py_modules = [ LIBRARY_NAME, CLI_NAME, "setupinfo" ],
         install_requires = [ 
 			"tabulate>=0.9.0"
 		],
         python_requires = ">=3.12",
-        license = "MIT"
+        license = "MIT",
+        entry_points = {
+            'console_scripts': [
+                f'{CLI_NAME} = {CLI_NAME}:main',
+            ],
+        }
     )

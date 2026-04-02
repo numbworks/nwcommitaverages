@@ -1,21 +1,24 @@
 '''
 A CLI application designed to calculate the average time between git commits.
 
-Alias: nwca
+Alias: nwcavg
 '''
 
 # GLOBAL MODULES
+import os
 import subprocess
-from argparse import ArgumentParser, Namespace
+from pathlib import Path
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from enum import StrEnum, auto
 from subprocess import CompletedProcess
 from tabulate import tabulate
-from typing import Callable, Literal, Optional, Tuple
+from typing import Callable, Literal, Optional
 
 # LOCAL MODULES
+from setupinfo import PROJECT_VERSION
+
 # CONSTANTS
 class LOGTYPE(StrEnum):
 
@@ -35,9 +38,16 @@ class HEADER(StrEnum):
     REFNAMES = "RefNames"
 
 # STATIC CLASSES
-class _MessageCollection():
+class _MessageCollectionAsciiBannerManager():
 
     '''Collects all the messages used for logging and for the exceptions.'''
+
+    @staticmethod
+    def provided_version_empty_whitespace() -> str:
+        return "The provided 'version' is empty or whitespace."
+class _MessageCollectionCommitAverageCalculator():
+
+    '''Collects all the messages used for logging and for the exceptions used by CommitAverageCalculator.'''
 
     @staticmethod
     def not_enough_data() -> str:
@@ -45,16 +55,16 @@ class _MessageCollection():
     @staticmethod
     def provided_log_type_not_supported(log_type : LOGTYPE) -> str:
         return f"The provided 'log_type' is not supported ('{log_type}')."
+    @staticmethod
+    def field_equals_to(name: str, value: str) -> str:
+        return f"{name}:'{value}'"
+class _MessageCollection(
+    _MessageCollectionAsciiBannerManager,
+    _MessageCollectionCommitAverageCalculator):
 
-    @staticmethod
-    def parser_description() -> str:
-        return "Calculates the average commit value and logs the result."
-    @staticmethod
-    def parser_file_path() -> str:
-        return "The file path to the Git repository for which the average commit value is calculated."
-    @staticmethod
-    def parser_logtype() -> str:
-        return f"The type of log ('{LOGTYPE.TABLE}' for a tabular overview, '{LOGTYPE.DAILY}' and '{LOGTYPE.MONTHLY}' for a list of statuses). The default is '{LOGTYPE.TABLE}'."
+    '''Collects all the messages used for logging and for the exceptions.'''
+
+    pass
 
 # CLASSES
 @dataclass(frozen = True)
@@ -96,14 +106,82 @@ class Summary():
     daily_logging_function : Callable[[], None]
     monthly_logging_function : Callable[[], None]    
     table_logging_function : Callable[[], None]
+class AsciiBannerManager:
+
+    """
+        Creates the ASCII banner for the provided library's version.
+
+        The figlet can be generated using 
+            - 'http://www.network-science.de/ascii/' (font: "banner3-D", width: 120)
+            - 'https://www.askapache.com/online-tools/figlet-ascii/'.
+    """
+
+    def __validate(self, version: str) -> None:
+        
+        """Validates the provided 'version'."""
+
+        if not version or not version.strip():
+            raise ValueError(_MessageCollection.provided_version_empty_whitespace())
+    def __create_figlet(self) -> tuple:
+        
+        """Returns a tuple containing the figlet and its width."""
+        
+        lines : list[str] = [
+            "'##::: ##:'##:::::'##::'######:::::'###::::'##::::'##::'######:::",
+            " ###:: ##: ##:'##: ##:'##... ##:::'## ##::: ##:::: ##:'##... ##::",
+            " ####: ##: ##: ##: ##: ##:::..:::'##:. ##:: ##:::: ##: ##:::..:::",
+            " ## ## ##: ##: ##: ##: ##:::::::'##:::. ##: ##:::: ##: ##::'####:",
+            " ##. ####: ##: ##: ##: ##::::::: #########:. ##:: ##:: ##::: ##::",
+            " ##:. ###: ##: ##: ##: ##::: ##: ##.... ##::. ## ##::: ##::: ##::",
+            " ##::. ##:. ###. ###::. ######:: ##:::: ##:::. ###::::. ######:::",
+            "..::::..:::...::...::::......:::..:::::..:::::...::::::......::::"
+        ]
+
+        return (os.linesep.join(lines), len(lines[0]))
+    def __create_frame(self, version: str, max_length: int) -> tuple:
+        
+        """Returns a tuple containing the frame of the figlet."""
+        
+        version_token : str = f"Version: {version}"
+        
+        margin_length : int = 5
+        total_length : int = max_length - len(version_token) - margin_length
+
+        top_line : str = "*" * max_length
+        bottom_line : str = f"{top_line[:total_length]}{version_token}{'*' * margin_length}"
+
+        return (top_line, bottom_line)
+
+    def create(self, version: str) -> str:
+        
+        """Creates the formatted ASCII banner with a versioned frame."""
+        
+        self.__validate(version)
+
+        figlet, max_length = self.__create_figlet()
+        top_line, bottom_line = self.__create_frame(version, max_length)
+
+        ascii_banner : str = os.linesep.join([
+            top_line,
+            figlet,
+            bottom_line,
+            ""
+        ])
+
+        return ascii_banner
 class CommitAverageCalculator():
     
     '''Calculates custom averages related to the current git repository.'''
 
+    __ascii_banner_manager : AsciiBannerManager
     __logging_function : Callable[[str], None]
 
-    def __init__(self, logging_function : Callable[[str], None] = lambda msg : print(msg)) -> None:
+    def __init__(
+        self, 
+        ascii_banner_manager : AsciiBannerManager = AsciiBannerManager(),
+        logging_function : Callable[[str], None] = lambda msg : print(msg)) -> None:
 
+        self.__ascii_banner_manager = ascii_banner_manager
         self.__logging_function = logging_function
 
     def __create_timestamp_dt(self, timestamp_int : int) -> datetime:
@@ -187,7 +265,7 @@ class CommitAverageCalculator():
         '''Extracts the avg_minutes from daily_statuses.'''
         
         return [status.avg_minutes for status in daily_statuses]
-    def __get_commit_items(self, file_path: Optional[str]) -> list[CommitItem]:
+    def __get_commit_items(self, folder_path: Optional[str]) -> list[CommitItem]:
 
         '''
             Retrieve a collection of CommitItem objects out of the git log.
@@ -198,14 +276,14 @@ class CommitAverageCalculator():
                 2023-08-21;1692637081;HEAD -> master, origin/master, origin/HEAD
                 ...
 
-            If "file_path" is None, "git log" is run against the current folder.
+            If "folder_path" is None, "git log" is run against the current folder.
             Otherwise, it's run against the provided folder ("git -C file_path log").
         '''
 
         git_command : list[str] = ["git", "log", "--pretty=format:%cs;%ct;%D", "--reverse"]
 
-        if file_path:
-            git_command = ["git", "-C", file_path, "log", "--pretty=format:%cs;%ct;%D", "--reverse"]
+        if folder_path:
+            git_command = ["git", "-C", folder_path, "log", "--pretty=format:%cs;%ct;%D", "--reverse"]
 
         output : CompletedProcess = subprocess.run(
             git_command,
@@ -371,6 +449,24 @@ class CommitAverageCalculator():
 
         for item in items :
             self.__logging_function(item)
+    def __log_ascii_banner(self):
+
+        """Logs the ascii banner."""
+
+        ascii_banner : str = self.__ascii_banner_manager.create(PROJECT_VERSION)
+
+        self.__logging_function("")
+        self.__logging_function(ascii_banner)    
+    def __log_folder_path(self, folder_path : Optional[str]):
+
+        """Logs the folder_path."""
+
+        if (folder_path):
+            self.__logging_function(_MessageCollection.field_equals_to("Folder", folder_path))
+        else:
+            self.__logging_function(_MessageCollection.field_equals_to("Folder", str(Path.cwd())))
+
+        self.__logging_function("")    
     def __orchestrate_logging(self, summary : Summary, log_type : Optional[Literal[LOGTYPE.TABLE, LOGTYPE.DAILY, LOGTYPE.MONTHLY]]) -> None:
 
         '''Orchestrate summary logging according to log_type.'''
@@ -387,11 +483,11 @@ class CommitAverageCalculator():
         else:
             raise Exception(_MessageCollection.provided_log_type_not_supported(log_type = log_type))
 
-    def run(self, file_path: Optional[str] = None) -> Summary:
+    def run(self, folder_path: Optional[str] = None) -> Summary:
 
         '''Returns a Summary or raises an Exception.'''
 
-        commit_items : list[CommitItem] = self.__get_commit_items(file_path)
+        commit_items : list[CommitItem] = self.__get_commit_items(folder_path)
         commit_items = self.__clean_commit_items(commit_items = commit_items)
 
         daily_statuses : list[DailyStatus] = self.__create_daily_statuses(commit_items = commit_items)
@@ -413,71 +509,23 @@ class CommitAverageCalculator():
         return summary
     def run_and_log(
         self, 
-        file_path: Optional[str] = None, 
+        folder_path: Optional[str] = None, 
         log_type : Optional[Literal[LOGTYPE.TABLE, LOGTYPE.DAILY, LOGTYPE.MONTHLY]] = None) -> None:
 
         '''Logs the outcome of the calculation or the Exception message.'''
 
         try:
 
-            summary : Summary = self.run(file_path = file_path)
+            self.__log_ascii_banner()
+            self.__log_folder_path(folder_path)
+
+            summary : Summary = self.run(folder_path = folder_path)
             self.__orchestrate_logging(summary = summary, log_type = log_type)
 
         except Exception as e:
 
             self.__logging_function(str(e))
-class APFactory():
-
-    '''Encapsulates all the logic related to the creation of a custom instance of argparse.ArgumentParser.'''
-
-    def create(self) -> ArgumentParser:
-
-        '''Creates a custom instance of argparse.ArgumentParser.'''
-
-        argument_parser : ArgumentParser = ArgumentParser(description = _MessageCollection.parser_description())
-        argument_parser.add_argument("--file_path", "-fp", required = False, help = _MessageCollection.parser_file_path())
-        argument_parser.add_argument("--logtype", "-lt", required = False, choices = [f"{LOGTYPE.TABLE}", f"{LOGTYPE.DAILY}", f"{LOGTYPE.MONTHLY}"], help = _MessageCollection.parser_logtype())
-
-        return argument_parser
-class APAdapter():
-
-    '''Customizes argparse.ArgumentParser for this use case.'''
-
-    __ap_factory : APFactory
-
-    def __init__(self, ap_factory : APFactory = APFactory()) -> None:
-        self.__ap_factory = ap_factory
-
-    def parse_args(self) -> Tuple[Optional[str], Optional[Literal[LOGTYPE.TABLE, LOGTYPE.DAILY, LOGTYPE.MONTHLY]]]:
-
-        '''Parses provided arguments.'''
-
-        parser : ArgumentParser = self.__ap_factory.create()
-        args : Namespace = parser.parse_args()
-
-        return (args.file_path, args.logtype)
-class CLIManager():
-
-    '''Collects all the logic related to the CLI management.'''
-
-    __ap_adapter : APAdapter
-    __ca_calculator : CommitAverageCalculator
-
-    def __init__(
-        self, 
-        ap_adapter : APAdapter = APAdapter(), 
-        ca_calculator : CommitAverageCalculator = CommitAverageCalculator()) -> None:
-
-        self.__ap_adapter = ap_adapter
-        self.__ca_calculator = ca_calculator
-
-    def run_and_log(self) -> None:
-
-        '''Calculates the average commit value and logs the result.'''
-
-        file_path, log_type = self.__ap_adapter.parse_args()
-        self.__ca_calculator.run_and_log(file_path = file_path, log_type = log_type)
 
 # MAIN
 if __name__ == "__main__":
-    CLIManager().run_and_log()
+    pass
