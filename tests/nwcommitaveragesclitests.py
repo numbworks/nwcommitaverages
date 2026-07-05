@@ -3,13 +3,13 @@ import unittest
 from argparse import ArgumentParser, Namespace
 from parameterized import parameterized
 from subprocess import CompletedProcess
-from typing import Optional
+from typing import Callable, Optional
 from unittest.mock import Mock, patch
 
 # LOCAL MODULES
 import sys, os
 sys.path.append(os.path.dirname(__file__).replace('tests', 'src'))
-from nwcommitaverages import CommitAverageCalculator
+from nwcommitaverages import CommitAverageCalculator, DailyStatus, MonthlyStatus, Summary
 from nwcommitaveragescli import LOGTYPE, _MessageCollection, APFactory, APAdapter, AsciiBannerManager, CLIManager, CLISTRING, TerminalWindowManager
 
 # SUPPORT METHODS
@@ -356,7 +356,107 @@ class APAdapterTestCase(unittest.TestCase):
 
         # Assert
         self.assertEqual(expected, actual)
+class CLIManagerTestCase(unittest.TestCase):
 
+    def test_logtable_shouldtabulatemonthlystatusesandlogtable_wheninvoked(self) -> None:
+
+        # Arrange
+        logs : list[str] = []
+        logging_function : Callable[[str], None] = lambda msg : logs.append(msg)
+
+        monthly_statuses : list[MonthlyStatus] = [
+            MonthlyStatus(
+                year_month = "2023-08",
+                dates = 2,
+                timestamps = [1700239075, 1700239305, 1700240579, 1700246557, 1700508271, 1700508711],
+                avg_minutes = 721.28,
+                ref_names = ["v3.2.0", "v3.3.0"]
+            ),
+            MonthlyStatus(
+                year_month = "2023-09",
+                dates = 1,
+                timestamps = [1700600000],
+                avg_minutes = 0.00,
+                ref_names = ["v3.4.0"]
+            )
+        ]
+
+        expected : str = (
+            "+-------------+--------+-----------+---------------+----------------+\n"
+            "| YearMonth   |   Days |   Commits |   DailyAvgMin | RefNames       |\n"
+            "+=============+========+===========+===============+================+\n"
+            "| 2023-08     |      2 |         6 |        721.28 | v3.2.0, v3.3.0 |\n"
+            "+-------------+--------+-----------+---------------+----------------+\n"
+            "| 2023-09     |      1 |         1 |   Not enough data | v3.4.0     |\n"
+            "+-------------+--------+-----------+---------------+----------------+"
+        )
+
+        # Act, Assert
+        with patch("nwcommitaveragescli.tabulate", return_value = expected) as tabulate:
+            
+            cli_manager : CLIManager = CLIManager(logging_function = logging_function)
+            cli_manager._CLIManager__log_table(monthly_statuses = monthly_statuses) # type: ignore
+
+            tabulate.assert_called_once()
+            self.assertEqual(logs[0], expected)
+    def test_logitems_shouldlogallitems_wheninvoked(self) -> None:
+
+        # Arrange
+        actual : list[str] = []
+        logging_function : Callable[[str], None] = lambda msg : actual.append(msg)
+
+        items : list[object] = [
+            DailyStatus(date_str = "2025-05-19", timestamps = [1, 2, 3], avg_minutes = 6.72, ref_names = []),
+            MonthlyStatus(year_month = "2025-05", dates = 1, timestamps = [1, 2, 3], avg_minutes = 6.72, ref_names = [])
+        ]
+
+        expected : list[str] = [
+            "DailyStatus(date_str='2025-05-19', timestamps=[1, 2, 3], avg_minutes=6.72, ref_names=[])",
+            "MonthlyStatus(year_month='2025-05', dates=1, timestamps=[1, 2, 3], avg_minutes=6.72, ref_names=[])"
+        ]
+
+        # Act
+        cli_manager : CLIManager = CLIManager(logging_function = logging_function)
+        cli_manager._CLIManager__log_items(items = items)   # type: ignore
+
+        # Assert
+        self.assertEqual(expected[0], str(actual[0]))
+        self.assertEqual(expected[1], str(actual[1]))
+    def test_orchestratelogging_shouldcallexpectedprivatemethod_whenlogtypeisvalid(self) -> None:
+
+        # Arrange
+        cli_manager : CLIManager = CLIManager()
+
+        summary : Summary = Summary(
+            commit_items = [],
+            daily_statuses = [],
+            monthly_statuses = []
+        )
+
+        # Act, Assert
+        with patch('nwcommitaveragescli.CLIManager._CLIManager__log_table') as log_table:
+            cli_manager._CLIManager__orchestrate_logging(summary = summary, log_type = LOGTYPE.TABLE)  # type: ignore
+            log_table.assert_called_once_with(monthly_statuses = summary.monthly_statuses)
+
+        with patch('nwcommitaveragescli.CLIManager._CLIManager__log_items') as log_items:
+            cli_manager._CLIManager__orchestrate_logging(summary = summary, log_type = LOGTYPE.DAILY)  # type: ignore
+            log_items.assert_called_once_with(items = summary.daily_statuses)
+
+        with patch('nwcommitaveragescli.CLIManager._CLIManager__log_items') as log_items:
+            cli_manager._CLIManager__orchestrate_logging(summary = summary, log_type = LOGTYPE.MONTHLY)  # type: ignore
+            log_items.assert_called_once_with(items = summary.monthly_statuses)
+    def test_orchestratelogging_shouldraiseexception_wheninvalidlogtype(self) -> None:
+
+        # Arrange
+        summary : Summary = Mock(spec = Summary)
+        log_type : str = "INVALID"
+        expected : str = "The provided 'log_type' is not supported ('INVALID')."
+
+        # Act, Assert
+        with self.assertRaises(Exception) as context:
+            CLIManager()._CLIManager__orchestrate_logging(summary = summary, log_type = log_type)  # type: ignore
+
+        self.assertEqual(expected, str(context.exception))
 
 # MAIN
 if __name__ == "__main__":
