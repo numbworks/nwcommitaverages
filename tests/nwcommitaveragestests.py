@@ -2,8 +2,8 @@
 import unittest
 from datetime import datetime, timezone
 from subprocess import CompletedProcess
-from typing import Callable, Optional
-from unittest.mock import Mock, patch
+from typing import Optional
+from unittest.mock import patch
 
 # LOCAL MODULES
 import sys, os
