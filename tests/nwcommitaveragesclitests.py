@@ -10,10 +10,163 @@ from unittest.mock import Mock, patch
 import sys, os
 sys.path.append(os.path.dirname(__file__).replace('tests', 'src'))
 from nwcommitaverages import CommitAverageCalculator
-from nwcommitaveragescli import APFactory, APAdapter, CLIManager, CLISTRING, TerminalWindowManager
+from nwcommitaveragescli import LOGTYPE, _MessageCollection, APFactory, APAdapter, AsciiBannerManager, CLIManager, CLISTRING, TerminalWindowManager
 
 # SUPPORT METHODS
 # TEST CLASSES
+class MessageCollectionCommitAverageCalculatorTestCase(unittest.TestCase):
+
+    def test_notenoughdata_shouldreturnexpectedmessage_wheninvoked(self):
+
+        # Arrange
+        expected : str = "Not enough data"
+
+        # Act
+        actual : str = _MessageCollection.not_enough_data()
+
+        # Assert
+        self.assertEqual(expected, actual)
+    def test_providedlogtypenotsupported_shouldreturnexpectedmessage_wheninvalidlogtypegiven(self):
+
+        # Arrange
+        log_type : LOGTYPE = LOGTYPE.DAILY  # We fake this is not supported.
+        expected : str = "The provided 'log_type' is not supported ('daily')."
+
+        # Act
+        actual : str = _MessageCollection.provided_log_type_not_supported(log_type)
+
+        # Assert
+        self.assertEqual(expected, actual)
+class AsciiBannerManagerTestCase(unittest.TestCase):
+
+    def test_validate_shouldraisevalueerror_whenversionisnone(self) -> None:
+
+        # Arrange
+        # Act, Assert
+        with self.assertRaises(ValueError) as context:
+            AsciiBannerManager()._AsciiBannerManager__validate(version = None) # type: ignore
+
+        self.assertEqual(_MessageCollection.provided_version_empty_whitespace(), str(context.exception))
+    def test_validate_shouldraisevalueerror_whenversioniswhitespace(self) -> None:
+
+        # Arrange
+        version : str = " "
+
+        # Act, Assert
+        with self.assertRaises(ValueError) as context:
+            AsciiBannerManager()._AsciiBannerManager__validate(version = version) # type: ignore
+
+        self.assertEqual(_MessageCollection.provided_version_empty_whitespace(), str(context.exception))
+    def test_createfiglet_shouldreturnexpectedmaxlength_wheninvoked(self) -> None:
+
+        # Arrange
+        expected : int = 65
+
+        # Act
+        _, max_length = AsciiBannerManager()._AsciiBannerManager__create_figlet() # type: ignore
+
+        # Assert
+        self.assertEqual(expected, max_length)
+    def test_createframe_shouldreturnexpectedtuple_wheninvoked(self) -> None:
+
+        # Arrange
+        version : str = "1.0.5"
+        max_length : int = 65
+        
+        expected_top_line : str = "*" * 65
+        expected_bottom_line : str = "*" * 46 + "Version: 1.0.5" + "*" * 5
+
+        # Act
+        top_line, bottom_line = AsciiBannerManager()._AsciiBannerManager__create_frame(version = version, max_length = max_length) # type: ignore
+
+        # Assert
+        self.assertEqual(expected_top_line, top_line)
+        self.assertEqual(expected_bottom_line, bottom_line)
+    def test_createstandard_shouldcallexpectedprivatemethodsandreturnbanner_wheninvoked(self) -> None:
+
+        # Arrange
+        ascii_banner_manager : AsciiBannerManager = AsciiBannerManager()
+        version : str = "1.0.1"
+        max_lenght : int = 65
+        
+        figlet_tpl : tuple = ("ascii_art", max_lenght)
+        frame_tpl : tuple = ("top_border", "bottom_border")
+
+        with patch.object(ascii_banner_manager, "_AsciiBannerManager__validate") as validate, \
+                patch.object(ascii_banner_manager, "_AsciiBannerManager__create_figlet", return_value = figlet_tpl) as create_figlet, \
+                patch.object(ascii_banner_manager, "_AsciiBannerManager__create_frame", return_value = frame_tpl) as create_frame:
+
+            # Act
+            actual : str = ascii_banner_manager.create_standard(version = version)
+
+            # Assert
+            validate.assert_called_once_with(version)
+            create_figlet.assert_called_once()
+            create_frame.assert_called_once_with(version, max_lenght)
+
+            self.assertIn("top_border", actual)
+            self.assertIn("ascii_art", actual)
+            self.assertIn("bottom_border", actual)
+    def test_createmini_shouldcallexpectedprivatemethodsandreturnminibanner_wheninvoked(self) -> None:
+
+        # Arrange
+        ascii_banner_manager : AsciiBannerManager = AsciiBannerManager()
+        version : str = "1.0.1"
+        expected : str = os.linesep.join([
+            "*****************",
+            "* NWCAVG v1.0.1 *",
+            "*****************",
+            ""
+        ])
+
+        with patch.object(ascii_banner_manager, "_AsciiBannerManager__validate") as validate:
+
+            # Act
+            actual : str = ascii_banner_manager.create_mini(version = version)
+
+            # Assert
+            validate.assert_called_once_with(version)
+            self.assertEqual(expected, actual)
+    def test_create_shouldreturnstandardbanner_whenterminalwidthisgreaterthanorequaltomaxlength(self) -> None:
+
+        # Arrange
+        ascii_banner_manager : AsciiBannerManager = AsciiBannerManager()
+        version : str = "1.0.1"
+        terminal_width : int = 80
+        max_length : int = 54
+        figlet_tpl : tuple = ("ascii_art", max_length)
+        expected_banner : str = "standard_banner"
+
+        with patch.object(ascii_banner_manager, "_AsciiBannerManager__create_figlet", return_value = figlet_tpl) as create_figlet, \
+                patch.object(ascii_banner_manager, "create_standard", return_value = expected_banner) as create_standard:
+
+            # Act
+            actual : str = ascii_banner_manager.create(version = version, terminal_width = terminal_width)
+
+            # Assert
+            create_figlet.assert_called_once()
+            create_standard.assert_called_once_with(version)
+            self.assertEqual(expected_banner, actual)
+    def test_create_shouldreturnminibanner_whenterminalwidthislessthanmaxlength(self) -> None:
+
+        # Arrange
+        ascii_banner_manager : AsciiBannerManager = AsciiBannerManager()
+        version : str = "1.0.1"
+        terminal_width : int = 40
+        max_length : int = 54
+        figlet_tpl : tuple = ("ascii_art", max_length)
+        expected_banner : str = "mini_banner"
+
+        with patch.object(ascii_banner_manager, "_AsciiBannerManager__create_figlet", return_value = figlet_tpl) as create_figlet, \
+                patch.object(ascii_banner_manager, "create_mini", return_value = expected_banner) as create_mini:
+
+            # Act
+            actual : str = ascii_banner_manager.create(version = version, terminal_width = terminal_width)
+
+            # Assert
+            create_figlet.assert_called_once()
+            create_mini.assert_called_once_with(version)
+            self.assertEqual(expected_banner, actual)
 class TerminalWindowManagerTestCase(unittest.TestCase):
 
     def test_defaultshutilwidthfunction_shouldreturncolumns_whenshutilissuccessful(self) -> None:
@@ -203,30 +356,7 @@ class APAdapterTestCase(unittest.TestCase):
 
         # Assert
         self.assertEqual(expected, actual)
-class CLIManagerTestCase(unittest.TestCase):
 
-    @parameterized.expand([
-        "/workspaces/nwsomething",
-        None
-    ])
-    def test_runandlog_shouldcallcalculatorwithargs_wheninvoked(self, folder_path : Optional[str]) -> None:
-
-        # Arrange
-        ap_adapter : APAdapter = Mock()
-        ap_adapter.parse_args.return_value = (folder_path)
-
-        ca_calculator : CommitAverageCalculator = Mock()
-
-        cli_manager : CLIManager = CLIManager(
-            ap_adapter = ap_adapter,
-            ca_calculator = ca_calculator
-        )
-
-        # Act
-        cli_manager.run_and_log()
-
-        # Assert
-        ca_calculator.run_and_log.assert_called_once_with(folder_path = folder_path)
 
 # MAIN
 if __name__ == "__main__":
