@@ -2,7 +2,7 @@
 
 # --- CONFIGURATION ---
 PROJECT_NAME="nwcommitaverages"
-PROJECT_VERSION="2.0.0"
+PROJECT_VERSION="2.0.1"
 PROJECT_ALIAS="nwcavg"
 CLI_NAME="nwcommitaveragescli"
 
@@ -20,7 +20,7 @@ if [[ "$(docker images -q $BASE_IMAGE 2> /dev/null)" == "" ]]; then
 fi
 
 # --- BUILD COMMAND ---
-time DOCKER_BUILDKIT=1 docker build \
+time DOCKER_BUILDKIT=1 docker build --progress=plain \
   -f "$DOCKER_FILE" \
   --build-arg PROJECT_NAME="$PROJECT_NAME" \
   --build-arg PROJECT_VERSION="$PROJECT_VERSION" \

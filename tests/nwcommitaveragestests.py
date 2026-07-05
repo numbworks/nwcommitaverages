@@ -2,110 +2,16 @@
 import unittest
 from datetime import datetime, timezone
 from subprocess import CompletedProcess
-from typing import Callable, Optional
-from unittest.mock import Mock, patch
+from typing import Optional
+from unittest.mock import patch
 
 # LOCAL MODULES
 import sys, os
 sys.path.append(os.path.dirname(__file__).replace('tests', 'src'))
-from nwcommitaverages import LOGTYPE, _MessageCollection, AsciiBannerManager, CommitAverageCalculator
-from nwcommitaverages import DailyStatus, CommitItem, MonthlyStatus, Summary
+from nwcommitaverages import CommitAverageCalculator, DailyStatus, CommitItem, MonthlyStatus, Summary
 
 # SUPPORT METHODS
 # TEST CLASSES
-class MessageCollectionTestCase(unittest.TestCase):
-
-    def test_notenoughdata_shouldreturnexpectedmessage_wheninvoked(self):
-
-        # Arrange
-        expected : str = "Not enough data"
-
-        # Act
-        actual : str = _MessageCollection.not_enough_data()
-
-        # Assert
-        self.assertEqual(expected, actual)
-    def test_providedlogtypenotsupported_shouldreturnexpectedmessage_wheninvalidlogtypegiven(self):
-
-        # Arrange
-        log_type : LOGTYPE = LOGTYPE.DAILY                                      # We fake this is not supported.
-        expected : str = "The provided 'log_type' is not supported ('daily')."
-
-        # Act
-        actual : str = _MessageCollection.provided_log_type_not_supported(log_type)
-
-        # Assert
-        self.assertEqual(expected, actual)
-class AsciiBannerManagerTestCase(unittest.TestCase):
-
-    def test_validate_shouldraisevalueerror_whenversionisnone(self) -> None:
-
-        # Arrange
-        # Act, Assert
-        with self.assertRaises(ValueError) as context:
-            AsciiBannerManager()._AsciiBannerManager__validate(version = None) # type: ignore
-
-        self.assertEqual(_MessageCollection.provided_version_empty_whitespace(), str(context.exception))
-    def test_validate_shouldraisevalueerror_whenversioniswhitespace(self) -> None:
-
-        # Arrange
-        version : str = " "
-
-        # Act, Assert
-        with self.assertRaises(ValueError) as context:
-            AsciiBannerManager()._AsciiBannerManager__validate(version = version) # type: ignore
-
-        self.assertEqual(_MessageCollection.provided_version_empty_whitespace(), str(context.exception))
-    def test_createfiglet_shouldreturnexpectedmaxlength_wheninvoked(self) -> None:
-
-        # Arrange
-        expected : int = 65
-
-        # Act
-        _, max_length = AsciiBannerManager()._AsciiBannerManager__create_figlet() # type: ignore
-
-        # Assert
-        self.assertEqual(expected, max_length)
-    def test_createframe_shouldreturnexpectedtuple_wheninvoked(self) -> None:
-
-        # Arrange
-        version : str = "1.0.5"
-        max_length : int = 65
-        
-        expected_top_line : str = "*" * 65
-        expected_bottom_line : str = "*" * 46 + "Version: 1.0.5" + "*" * 5
-
-        # Act
-        top_line, bottom_line = AsciiBannerManager()._AsciiBannerManager__create_frame(version = version, max_length = max_length) # type: ignore
-
-        # Assert
-        self.assertEqual(expected_top_line, top_line)
-        self.assertEqual(expected_bottom_line, bottom_line)
-    def test_create_shouldcallexpectedprivatemethodsandreturnbanner_wheninvoked(self) -> None:
-
-        # Arrange
-        ascii_banner_manager : AsciiBannerManager = AsciiBannerManager()
-        version : str = "1.0.5"
-        max_lenght : int = 65
-        
-        figlet_tpl : tuple = ("ascii_art", max_lenght)
-        frame_tpl : tuple = ("top_border", "bottom_border")
-
-        with patch.object(ascii_banner_manager, "_AsciiBannerManager__validate") as mocked_validate, \
-                patch.object(ascii_banner_manager, "_AsciiBannerManager__create_figlet", return_value = figlet_tpl) as mocked_create_figlet, \
-                patch.object(ascii_banner_manager, "_AsciiBannerManager__create_frame", return_value = frame_tpl) as mocked_create_frame:
-
-            # Act
-            actual : str = ascii_banner_manager.create(version = version)
-
-            # Assert
-            mocked_validate.assert_called_once_with(version)
-            mocked_create_figlet.assert_called_once()
-            mocked_create_frame.assert_called_once_with(version, max_lenght)
-
-            self.assertIn("top_border", actual)
-            self.assertIn("ascii_art", actual)
-            self.assertIn("bottom_border", actual)
 class CommitAverageCalculatorTestCase(unittest.TestCase):
 
     def test_createtimestampdt_shouldreturnexpecteddatetimetz_wheninvoked(self) -> None:
@@ -364,110 +270,6 @@ class CommitAverageCalculatorTestCase(unittest.TestCase):
         self.assertEqual(expected[0].timestamps, actual[0].timestamps)
         self.assertAlmostEqual(expected[0].avg_minutes, actual[0].avg_minutes, places = 2)
         self.assertCountEqual(expected[0].ref_names, actual[0].ref_names)
-    def test_logtable_shouldtabulatemonthlystatusesandlogtable_wheninvoked(self) -> None:
-
-        # Arrange
-        logs : list[str] = []
-        logging_function : Callable[[str], None] = lambda msg : logs.append(msg)
-
-        monthly_statuses : list[MonthlyStatus] = [
-            MonthlyStatus(
-                year_month = "2023-08",
-                dates = 2,
-                timestamps = [1700239075, 1700239305, 1700240579, 1700246557, 1700508271, 1700508711],
-                avg_minutes = 721.28,
-                ref_names = ["v3.2.0", "v3.3.0"]
-            ),
-            MonthlyStatus(
-                year_month = "2023-09",
-                dates = 1,
-                timestamps = [1700600000],
-                avg_minutes = 0.00,
-                ref_names = ["v3.4.0"]
-            )
-        ]
-
-        expected : str = (
-            "+-------------+--------+-----------+---------------+----------------+\n"
-            "| YearMonth   |   Days |   Commits |   DailyAvgMin | RefNames       |\n"
-            "+=============+========+===========+===============+================+\n"
-            "| 2023-08     |      2 |         6 |        721.28 | v3.2.0, v3.3.0 |\n"
-            "+-------------+--------+-----------+---------------+----------------+\n"
-            "| 2023-09     |      1 |         1 |   Not enough data | v3.4.0     |\n"
-            "+-------------+--------+-----------+---------------+----------------+"
-        )
-
-        # Act, Assert
-        with patch("nwcommitaverages.tabulate", return_value = expected) as mocked_tabulate:
-            
-            ca_calculator : CommitAverageCalculator = CommitAverageCalculator(logging_function = logging_function)
-            ca_calculator._CommitAverageCalculator__log_table(monthly_statuses = monthly_statuses)  # type: ignore
-
-            mocked_tabulate.assert_called_once()
-            self.assertEqual(logs[0], expected)
-    def test_logitems_shouldlogallitems_wheninvoked(self) -> None:
-
-        # Arrange
-        actual : list[str] = []
-        logging_function : Callable[[str], None] = lambda msg : actual.append(msg)
-
-        items : list[object] = [
-            DailyStatus(date_str = "2025-05-19", timestamps = [1, 2, 3], avg_minutes = 6.72, ref_names = []),
-            MonthlyStatus(year_month = "2025-05", dates = 1, timestamps = [1, 2, 3], avg_minutes = 6.72, ref_names = [])
-        ]
-
-        expected : list[str] = [
-            "DailyStatus(date_str='2025-05-19', timestamps=[1, 2, 3], avg_minutes=6.72, ref_names=[])",
-            "MonthlyStatus(year_month='2025-05', dates=1, timestamps=[1, 2, 3], avg_minutes=6.72, ref_names=[])"
-        ]
-
-        # Act
-        calculator : CommitAverageCalculator = CommitAverageCalculator(logging_function = logging_function)
-        calculator._CommitAverageCalculator__log_items(items = items)  # type: ignore
-
-        # Assert
-        self.assertEqual(expected[0], str(actual[0]))
-        self.assertEqual(expected[1], str(actual[1]))
-    def test_orchestratelogging_shouldcallexpectedloggingfunction_whenlogtypeisvalid(self) -> None:
-
-        # Arrange
-        table_logging_function : Mock = Mock()
-        daily_logging_function : Mock = Mock()
-        monthly_logging_function : Mock = Mock()
-
-        summary : Summary = Summary(
-            commit_items = [],
-            daily_statuses = [],
-            monthly_statuses = [],
-            daily_logging_function = daily_logging_function,
-            monthly_logging_function = monthly_logging_function,
-            table_logging_function = table_logging_function
-        )
-
-        calculator : CommitAverageCalculator = CommitAverageCalculator()
-
-        # Act
-        calculator._CommitAverageCalculator__orchestrate_logging(summary = summary, log_type = LOGTYPE.TABLE)  # type: ignore
-        calculator._CommitAverageCalculator__orchestrate_logging(summary = summary, log_type = LOGTYPE.DAILY)  # type: ignore
-        calculator._CommitAverageCalculator__orchestrate_logging(summary = summary, log_type = LOGTYPE.MONTHLY)  # type: ignore
-
-        # Assert
-        table_logging_function.assert_called_once()
-        daily_logging_function.assert_called_once()
-        monthly_logging_function.assert_called_once()
-    def test_orchestratelogging_shouldraiseexception_wheninvalidlogtype(self) -> None:
-
-        # Arrange
-        summary : Summary = Mock(spec = Summary)
-        log_type : str = "INVALID"
-        expected : str = "The provided 'log_type' is not supported ('INVALID')."
-
-        # Act, Assert
-        with self.assertRaises(Exception) as context:
-            CommitAverageCalculator()._CommitAverageCalculator__orchestrate_logging(summary = summary, log_type = log_type)  # type: ignore
-
-        self.assertEqual(expected, str(context.exception))
-
     def test_run_shouldcallexpectedprivatemethodsandreturnasummary_wheninvoked(self) -> None:
 
         # Arrange
@@ -489,45 +291,6 @@ class CommitAverageCalculatorTestCase(unittest.TestCase):
             mocked_create_monthly_statuses.assert_called_once_with(daily_statuses = [])
 
             self.assertIsInstance(summary, Summary)
-    def test_runandlog_shouldcallrunandorchestralogging_wheninvoked(self) -> None:
-
-        # Arrange
-        ca_calculator : CommitAverageCalculator = CommitAverageCalculator(logging_function = lambda msg : None)
-        folder_path : Optional[str] = "/workspaces/nwsomething"
-        log_type : Optional[LOGTYPE] = LOGTYPE.TABLE
-
-        with patch.object(ca_calculator, "run", return_value=Mock()) as mocked_run, \
-             patch.object(ca_calculator, "_CommitAverageCalculator__orchestrate_logging") as mocked_orchestrate_logging:
-
-            # Act
-            ca_calculator.run_and_log(folder_path = folder_path, log_type = log_type)
-
-            # Assert
-            mocked_run.assert_called_once_with(folder_path = folder_path)
-            mocked_orchestrate_logging.assert_called_once()
-    def test_runandlog_shouldlogexceptionmessage_whenorchestrateloggingraisesexception(self) -> None:
-
-        # Arrange
-        actual : list[str] = []
-        logging_function : Callable[[str], None] = lambda msg : actual.append(msg)
-
-        ca_calculator : CommitAverageCalculator = CommitAverageCalculator(logging_function = logging_function)
-
-        file_path : Optional[str] = "/workspaces/nwsomething"
-        log_type : Optional[LOGTYPE] = LOGTYPE.TABLE
-        summary : Mock = Mock(spec = Summary)
-        
-        expected : str = "The provided 'log_type' is not supported ('...')."
-
-        with patch.object(ca_calculator, "run", return_value = summary) as mocked_run, \
-             patch.object(ca_calculator, "_CommitAverageCalculator__orchestrate_logging", side_effect = Exception(expected)) as mocked_orchestrate_logging:
-
-            # Act
-            ca_calculator.run_and_log(folder_path = file_path, log_type = log_type)
-
-            # Assert
-            mocked_orchestrate_logging.assert_called_once_with(summary = summary, log_type = log_type)
-            self.assertEqual(expected, actual[-1])
 
 # MAIN
 if __name__ == "__main__":

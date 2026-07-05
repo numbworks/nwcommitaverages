@@ -2,6 +2,7 @@ FROM python:3.12.5-bookworm
 
 # MODULE DEPENDENCIES
 RUN pip install tabulate==0.9.0
+RUN pip install pyyaml==6.0.3
 
 # JUPYTER NOTEBOOK
 
@@ -19,3 +20,4 @@ RUN pip install pylint==3.3.3
 
 # OTHERS
 RUN pip install --upgrade pip==26.0.1
+RUN pip install setuptools==82.0.1

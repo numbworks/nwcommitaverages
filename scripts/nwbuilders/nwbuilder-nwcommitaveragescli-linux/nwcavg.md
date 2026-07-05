@@ -21,10 +21,16 @@ In order to work, it requires to be run against a local Git repository and that 
 
 # EXAMPLES
 **Run it against the current folder:**
-    nwcavg
+
+```text
+nwcavg
+```
 
 **Run it against another folder:**
-    nwcavg --folder_path /home/test_application
+
+```text
+nwcavg --folder_path /home/test_application
+```
 
 # AUTHOR
 numbworks (numbworks@gmail.com)

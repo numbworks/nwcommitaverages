@@ -2,17 +2,312 @@
 import unittest
 from argparse import ArgumentParser, Namespace
 from parameterized import parameterized
-from typing import Optional
+from subprocess import CompletedProcess
+from typing import Callable, Optional
 from unittest.mock import Mock, patch
 
 # LOCAL MODULES
 import sys, os
 sys.path.append(os.path.dirname(__file__).replace('tests', 'src'))
-from nwcommitaverages import CommitAverageCalculator
-from nwcommitaveragescli import APFactory, APAdapter, CLIManager, CLISTRING
+from nwcommitaverages import MonthlyStatus, Summary
+from nwcommitaveragescli import _MessageCollection, APFactory, APAdapter, AsciiBannerManager, CLIManager, CLISTRING, TerminalWindowManager
 
 # SUPPORT METHODS
 # TEST CLASSES
+class MessageCollectionCLIManagerTestCase(unittest.TestCase):
+
+    def test_notenoughdata_shouldreturnexpectedmessage_wheninvoked(self):
+
+        # Arrange
+        expected : str = "Not enough data"
+
+        # Act
+        actual : str = _MessageCollection.not_enough_data()
+
+        # Assert
+        self.assertEqual(expected, actual)
+class AsciiBannerManagerTestCase(unittest.TestCase):
+
+    def test_validate_shouldraisevalueerror_whenversionisnone(self) -> None:
+
+        # Arrange
+        # Act, Assert
+        with self.assertRaises(ValueError) as context:
+            AsciiBannerManager()._AsciiBannerManager__validate(version = None) # type: ignore
+
+        self.assertEqual(_MessageCollection.provided_version_empty_whitespace(), str(context.exception))
+    def test_validate_shouldraisevalueerror_whenversioniswhitespace(self) -> None:
+
+        # Arrange
+        version : str = " "
+
+        # Act, Assert
+        with self.assertRaises(ValueError) as context:
+            AsciiBannerManager()._AsciiBannerManager__validate(version = version) # type: ignore
+
+        self.assertEqual(_MessageCollection.provided_version_empty_whitespace(), str(context.exception))
+    def test_createfiglet_shouldreturnexpectedmaxlength_wheninvoked(self) -> None:
+
+        # Arrange
+        expected : int = 65
+
+        # Act
+        _, max_length = AsciiBannerManager()._AsciiBannerManager__create_figlet() # type: ignore
+
+        # Assert
+        self.assertEqual(expected, max_length)
+    def test_createframe_shouldreturnexpectedtuple_wheninvoked(self) -> None:
+
+        # Arrange
+        version : str = "1.0.5"
+        max_length : int = 65
+        
+        expected_top_line : str = "*" * 65
+        expected_bottom_line : str = "*" * 46 + "Version: 1.0.5" + "*" * 5
+
+        # Act
+        top_line, bottom_line = AsciiBannerManager()._AsciiBannerManager__create_frame(version = version, max_length = max_length) # type: ignore
+
+        # Assert
+        self.assertEqual(expected_top_line, top_line)
+        self.assertEqual(expected_bottom_line, bottom_line)
+    def test_createstandard_shouldcallexpectedprivatemethodsandreturnbanner_wheninvoked(self) -> None:
+
+        # Arrange
+        ascii_banner_manager : AsciiBannerManager = AsciiBannerManager()
+        version : str = "1.0.1"
+        max_lenght : int = 65
+        
+        figlet_tpl : tuple = ("ascii_art", max_lenght)
+        frame_tpl : tuple = ("top_border", "bottom_border")
+
+        with patch.object(ascii_banner_manager, "_AsciiBannerManager__validate") as validate, \
+                patch.object(ascii_banner_manager, "_AsciiBannerManager__create_figlet", return_value = figlet_tpl) as create_figlet, \
+                patch.object(ascii_banner_manager, "_AsciiBannerManager__create_frame", return_value = frame_tpl) as create_frame:
+
+            # Act
+            actual : str = ascii_banner_manager.create_standard(version = version)
+
+            # Assert
+            validate.assert_called_once_with(version)
+            create_figlet.assert_called_once()
+            create_frame.assert_called_once_with(version, max_lenght)
+
+            self.assertIn("top_border", actual)
+            self.assertIn("ascii_art", actual)
+            self.assertIn("bottom_border", actual)
+    def test_createmini_shouldcallexpectedprivatemethodsandreturnminibanner_wheninvoked(self) -> None:
+
+        # Arrange
+        ascii_banner_manager : AsciiBannerManager = AsciiBannerManager()
+        version : str = "1.0.1"
+        expected : str = os.linesep.join([
+            "*****************",
+            "* NWCAVG v1.0.1 *",
+            "*****************",
+            ""
+        ])
+
+        with patch.object(ascii_banner_manager, "_AsciiBannerManager__validate") as validate:
+
+            # Act
+            actual : str = ascii_banner_manager.create_mini(version = version)
+
+            # Assert
+            validate.assert_called_once_with(version)
+            self.assertEqual(expected, actual)
+    def test_create_shouldreturnstandardbanner_whenterminalwidthisgreaterthanorequaltomaxlength(self) -> None:
+
+        # Arrange
+        ascii_banner_manager : AsciiBannerManager = AsciiBannerManager()
+        version : str = "1.0.1"
+        terminal_width : int = 80
+        max_length : int = 54
+        figlet_tpl : tuple = ("ascii_art", max_length)
+        expected_banner : str = "standard_banner"
+
+        with patch.object(ascii_banner_manager, "_AsciiBannerManager__create_figlet", return_value = figlet_tpl) as create_figlet, \
+                patch.object(ascii_banner_manager, "create_standard", return_value = expected_banner) as create_standard:
+
+            # Act
+            actual : str = ascii_banner_manager.create(version = version, terminal_width = terminal_width)
+
+            # Assert
+            create_figlet.assert_called_once()
+            create_standard.assert_called_once_with(version)
+            self.assertEqual(expected_banner, actual)
+    def test_create_shouldreturnminibanner_whenterminalwidthislessthanmaxlength(self) -> None:
+
+        # Arrange
+        ascii_banner_manager : AsciiBannerManager = AsciiBannerManager()
+        version : str = "1.0.1"
+        terminal_width : int = 40
+        max_length : int = 54
+        figlet_tpl : tuple = ("ascii_art", max_length)
+        expected_banner : str = "mini_banner"
+
+        with patch.object(ascii_banner_manager, "_AsciiBannerManager__create_figlet", return_value = figlet_tpl) as create_figlet, \
+                patch.object(ascii_banner_manager, "create_mini", return_value = expected_banner) as create_mini:
+
+            # Act
+            actual : str = ascii_banner_manager.create(version = version, terminal_width = terminal_width)
+
+            # Assert
+            create_figlet.assert_called_once()
+            create_mini.assert_called_once_with(version)
+            self.assertEqual(expected_banner, actual)
+class TerminalWindowManagerTestCase(unittest.TestCase):
+
+    def test_defaultshutilwidthfunction_shouldreturncolumns_whenshutilissuccessful(self) -> None:
+
+        # Arrange
+        expected : int = 80
+
+        with patch("shutil.get_terminal_size") as get_terminal_size:
+
+            get_terminal_size.return_value = os.terminal_size((expected, 24))
+
+            # Act
+            actual : Optional[int] = TerminalWindowManager.default_shutil_width_function()
+
+            # Assert
+            self.assertEqual(actual, expected)
+    def test_defaultshutilwidthfunction_shouldreturnnone_whenexceptionisraised(self) -> None:
+
+        # Arrange
+        with patch("nwcommitaveragescli.get_terminal_size", side_effect = Exception("Error")):
+
+            # Act
+            actual : Optional[int] = TerminalWindowManager.default_shutil_width_function()
+
+            # Assert
+            self.assertIsNone(actual)
+    
+    def test_defaultsttywidthfunction_shouldreturnwidth_whensttyissuccessful(self) -> None:
+
+        # Arrange
+        expected : int = 100
+
+        process : Mock = Mock(spec = CompletedProcess)
+        process.stdout = f"  {expected}  \n"
+        
+        with patch("subprocess.run", return_value = process) as mock_run:
+
+            # Act
+            actual : Optional[int] = TerminalWindowManager.default_stty_width_function()
+
+            # Assert
+            mock_run.assert_called_once_with(
+                ["/bin/sh", "-c", "stty size | cut -d' ' -f2"],
+                capture_output = True,
+                text = True,
+                check = False,
+            )
+            self.assertEqual(actual, expected)
+    def test_defaultsttywidthfunction_shouldreturnnone_whensttyreturnsnegative(self) -> None:
+
+        # Arrange
+        process : Mock = Mock(spec = CompletedProcess)
+        process.stdout = "-10\n"
+        
+        with patch("subprocess.run", return_value = process):
+
+            # Act
+            actual_width : Optional[int] = TerminalWindowManager.default_stty_width_function()
+
+            # Assert
+            self.assertIsNone(actual_width)
+    def test_defaultsttywidthfunction_shouldreturnnone_whenexceptionisraised(self) -> None:
+
+        # Arrange
+        with patch("subprocess.run", side_effect = Exception("Error")):
+
+            # Act
+            actual_width : Optional[int] = TerminalWindowManager.default_stty_width_function()
+
+            # Assert
+            self.assertIsNone(actual_width)
+
+    def test_init_shouldassignprovidedfunctions_wheninvokedwitharguments(self) -> None:
+
+        # Arrange
+        shutil_width_function : Mock = Mock()
+        stty_width_function : Mock = Mock()
+
+        # Act
+        tw_manager : TerminalWindowManager = TerminalWindowManager(
+            shutil_width_function = shutil_width_function,
+            stty_width_function = stty_width_function
+        )
+
+        # Assert
+        self.assertEqual(tw_manager._TerminalWindowManager__shutil_width_function, shutil_width_function)   # type: ignore
+        self.assertEqual(tw_manager._TerminalWindowManager__stty_width_function, stty_width_function)       # type: ignore
+    def test_init_shouldassigndefaultfunctions_wheninvokedwithoutarguments(self) -> None:
+
+        # Arrange
+        tw_manager : TerminalWindowManager = TerminalWindowManager()
+
+        # Assert
+        self.assertEqual(tw_manager._TerminalWindowManager__shutil_width_function, TerminalWindowManager.default_shutil_width_function) # type: ignore
+        self.assertEqual(tw_manager._TerminalWindowManager__stty_width_function, TerminalWindowManager.default_stty_width_function)     # type: ignore
+
+    def test_getorcutoff_shouldreturnshutilwidth_whenshutilissuccessful(self) -> None:
+
+        # Arrange
+        expected : int = 120
+        shutil_width_function : Mock = Mock(return_value = expected)
+        stty_width_function : Mock = Mock()
+        
+        tw_manager : TerminalWindowManager = TerminalWindowManager(
+            shutil_width_function = shutil_width_function,
+            stty_width_function = stty_width_function
+        )
+
+        # Act
+        actual : int = tw_manager.get_or_cutoff()
+
+        # Assert
+        self.assertEqual(actual, expected)
+        shutil_width_function.assert_called_once()
+        stty_width_function.assert_not_called()
+    def test_getorcutoff_shouldreturnsttywidth_whenshutilfailsandsttyissuccessful(self) -> None:
+
+        # Arrange
+        expected : int = 90
+        shutil_width_function : Mock = Mock(return_value = None)
+        stty_width_function : Mock = Mock(return_value = expected)
+        
+        tw_manager : TerminalWindowManager = TerminalWindowManager(
+            shutil_width_function = shutil_width_function,
+            stty_width_function = stty_width_function
+        )
+
+        # Act
+        actual : int = tw_manager.get_or_cutoff()
+
+        # Assert
+        self.assertEqual(actual, expected)
+        shutil_width_function.assert_called_once()
+        stty_width_function.assert_called_once()
+    def test_getorcutoff_shouldreturncutoffwidth_whenbothfunctionsfail(self) -> None:
+
+        # Arrange
+        shutil_width_function : Mock = Mock(return_value = None)
+        stty_width_function : Mock = Mock(return_value = None)
+        
+        tw_manager : TerminalWindowManager = TerminalWindowManager(
+            shutil_width_function = shutil_width_function,
+            stty_width_function = stty_width_function
+        )
+
+        # Act
+        actual : int = tw_manager.get_or_cutoff()
+
+        # Assert
+        self.assertEqual(actual, TerminalWindowManager.cutoff_width)
+        shutil_width_function.assert_called_once()
+        stty_width_function.assert_called_once()
 class APFactoryTestCase(unittest.TestCase):
 
     def test_create_shouldreturnexpectedargumentparser_wheninvoked(self) -> None:
@@ -52,28 +347,190 @@ class APAdapterTestCase(unittest.TestCase):
         self.assertEqual(expected, actual)
 class CLIManagerTestCase(unittest.TestCase):
 
+    def setUp(self):
+
+        self.monthly_statuses : list[MonthlyStatus] = [
+            MonthlyStatus(
+                year_month = "2023-08",
+                dates = 2,
+                timestamps = [1700239075, 1700239305, 1700240579, 1700246557, 1700508271, 1700508711],
+                avg_minutes = 721.28,
+                ref_names = ["v3.2.0", "v3.3.0"]
+            ),
+            MonthlyStatus(
+                year_month = "2023-09",
+                dates = 1,
+                timestamps = [1700600000],
+                avg_minutes = 0.00,
+                ref_names = ["v3.4.0"]
+            )
+        ]
+
+        self.monthly_statuses_table : str = (
+            "+-------------+--------+-----------+---------------+----------------+\n"
+            "| YearMonth   |   Days |   Commits |   DailyAvgMin | RefNames       |\n"
+            "+=============+========+===========+===============+================+\n"
+            "| 2023-08     |      2 |         6 |        721.28 | v3.2.0, v3.3.0 |\n"
+            "+-------------+--------+-----------+---------------+----------------+\n"
+            "| 2023-09     |      1 |         1 | Not enough data | v3.4.0       |\n"
+            "+-------------+--------+-----------+---------------+----------------+"
+        )
+
+        self.monthly_statuses_yaml : str = (
+            "- YearMonth: 2023-08\n"
+            "  Days: 2\n"
+            "  Commits: 6\n"
+            "  DailyAvgMin: 721.28\n"
+            "  RefNames: v3.2.0, v3.3.0\n"
+            "\n"
+            "- YearMonth: 2023-09\n"
+            "  Days: 1\n"
+            "  Commits: 1\n"
+            "  DailyAvgMin: Not enough data\n"
+            "  RefNames: v3.4.0\n"
+        )
+
+    def test_converttotable_shouldreturnexpectedtablestring_wheninvoked(self) -> None:
+
+        # Arrange
+        # Act, Assert
+        with patch("nwcommitaveragescli.tabulate", return_value = self.monthly_statuses_table) as tabulate:
+            
+            actual : str = CLIManager()._CLIManager__convert_to_table(monthly_statuses = self.monthly_statuses) # type: ignore
+
+            tabulate.assert_called_once()
+            self.assertEqual(actual, self.monthly_statuses_table)
+    def test_calculatetablemaxlenght_shouldreturnexpectedinteger_wheninvoked(self) -> None:
+
+        # Arrange
+        expected : int = 69
+
+        # Act
+        actual : int = CLIManager()._CLIManager__calculate_table_max_lenght(table = self.monthly_statuses_table) # type: ignore
+
+        # Assert
+        self.assertEqual(expected, actual)
+    def test_converttoyaml_shouldreturnexpectedyamlstring_wheninvoked(self) -> None:
+
+        # Arrange
+
+
+        # Act, Assert
+        with patch("yaml.dump", return_value = self.monthly_statuses_yaml.replace("\n\n-", "\n-")) as yaml_dump:
+            
+            actual : str = CLIManager()._CLIManager__convert_to_yaml(monthly_statuses = self.monthly_statuses) # type: ignore
+
+            yaml_dump.assert_called_once()
+            self.assertEqual(actual, self.monthly_statuses_yaml)
+
+    def test_logmonthlystatuses_shouldcalltablemethods_whentablewidthislessthanterminalwidth(self) -> None:
+
+        # Arrange
+        logging_function : Mock = Mock()
+        monthly_statuses : list[MonthlyStatus] = []
+
+        table : str = "some table"
+        terminal_width : int = 80
+        table_max_length : int = 50
+
+        # Act, Assert
+        with patch("nwcommitaveragescli.TerminalWindowManager.get_or_cutoff", return_value = terminal_width) as get_or_cutoff, \
+             patch.object(CLIManager, "_CLIManager__convert_to_table", return_value = table) as convert_to_table, \
+             patch.object(CLIManager, "_CLIManager__calculate_table_max_lenght", return_value = table_max_length) as calculate_table_max_lenght, \
+             patch.object(CLIManager, "_CLIManager__convert_to_yaml") as convert_to_yaml:
+
+                cli_manager : CLIManager = CLIManager(logging_function = logging_function)
+                cli_manager._CLIManager__log_monthly_statuses(monthly_statuses = monthly_statuses) # type: ignore
+
+                get_or_cutoff.assert_called_once()
+                convert_to_table.assert_called_once_with(monthly_statuses)
+                calculate_table_max_lenght.assert_called_once_with(table)
+                logging_function.assert_called_once_with(table)
+                
+                convert_to_yaml.assert_not_called()
+    def test_logmonthlystatuses_shouldcallyamlmethods_whentablewidthisgreaterthanorequaltoterminalwidth(self) -> None:
+
+        # Arrange
+        logging_function : Mock = Mock()
+        monthly_statuses : list[MonthlyStatus] = []
+
+        table : str = "some table"
+        yaml_str : str = "some yaml"
+        terminal_width : int = 40
+        table_max_length : int = 50
+
+        # Act, Assert
+        with patch("nwcommitaveragescli.TerminalWindowManager.get_or_cutoff", return_value = terminal_width) as get_or_cutoff, \
+             patch.object(CLIManager, "_CLIManager__convert_to_table", return_value = table) as convert_to_table, \
+             patch.object(CLIManager, "_CLIManager__calculate_table_max_lenght", return_value = table_max_length) as calculate_table_max_lenght, \
+             patch.object(CLIManager, "_CLIManager__convert_to_yaml", return_value = yaml_str) as convert_to_yaml:
+
+                cli_manager : CLIManager = CLIManager(logging_function = logging_function)
+                cli_manager._CLIManager__log_monthly_statuses(monthly_statuses = monthly_statuses) # type: ignore
+
+                get_or_cutoff.assert_called_once()
+                convert_to_table.assert_called_once_with(monthly_statuses)
+                calculate_table_max_lenght.assert_called_once_with(table)
+                convert_to_yaml.assert_called_once_with(monthly_statuses)
+                logging_function.assert_called_once_with(yaml_str)
+
     @parameterized.expand([
         "/workspaces/nwsomething",
         None
     ])
-    def test_runandlog_shouldcallcalculatorwithargs_wheninvoked(self, folder_path : Optional[str]) -> None:
+    def test_parse_shouldcallexpectedprivatemethods_wheninvoked(self, folder_path: Optional[str]) -> None:
 
         # Arrange
-        ap_adapter : APAdapter = Mock()
-        ap_adapter.parse_args.return_value = (folder_path)
+        ap_adapter: Mock = Mock()
+        ap_adapter.parse_args.return_value = folder_path
 
-        ca_calculator : CommitAverageCalculator = Mock()
+        summary: Mock = Mock(spec = Summary)
+        summary.monthly_statuses = []
+        
+        ca_calculator: Mock = Mock()
+        ca_calculator.run.return_value = summary
 
-        cli_manager : CLIManager = CLIManager(
+        cli_manager = CLIManager(
             ap_adapter = ap_adapter,
             ca_calculator = ca_calculator
         )
 
-        # Act
-        cli_manager.run_and_log()
+        # Act, Assert
+        with patch('nwcommitaveragescli.CLIManager._CLIManager__log_ascii_banner') as log_ascii_banner, \
+             patch('nwcommitaveragescli.CLIManager._CLIManager__log_folder_path') as log_folder_path, \
+             patch('nwcommitaveragescli.CLIManager._CLIManager__log_monthly_statuses') as log_monthly_statuses:
+            
+            cli_manager.parse()
+
+            log_ascii_banner.assert_called_once()
+            log_folder_path.assert_called_once_with(folder_path = folder_path)
+
+            ap_adapter.parse_args.assert_called_once()
+            ca_calculator.run.assert_called_once_with(folder_path = folder_path)
+
+            log_monthly_statuses.assert_called_once_with(monthly_statuses = summary.monthly_statuses)
+
+    def test_parse_shouldlogexception_wheninvalidargument(self) -> None:
+
+        # Arrange
+        expected : str = "Something went wrong during parsing or calculation."
+        
+        ap_adapter : Mock = Mock()
+        ap_adapter.parse_args.side_effect = Exception(expected)
+        
+        logs : list[str] = []
+        logging_function : Callable[[str], None] = lambda msg : logs.append(msg)
+
+        cli_manager = CLIManager(
+            ap_adapter = ap_adapter,
+            logging_function = logging_function
+        )
+
+        # Act,          
+        cli_manager.parse()
 
         # Assert
-        ca_calculator.run_and_log.assert_called_once_with(folder_path = folder_path)
+        self.assertEqual(logs[2], expected)
 
 # MAIN
 if __name__ == "__main__":

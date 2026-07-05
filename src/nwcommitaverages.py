@@ -5,67 +5,16 @@ Alias: nwcavg
 '''
 
 # GLOBAL MODULES
-import os
 import subprocess
-from pathlib import Path
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from enum import StrEnum, auto
 from subprocess import CompletedProcess
-from tabulate import tabulate
-from typing import Callable, Literal, Optional
+from typing import Optional
 
-# LOCAL MODULES
-from setupinfo import PROJECT_VERSION
-
+# NW/LOCAL MODULES
 # CONSTANTS
-class LOGTYPE(StrEnum):
-
-    '''Represents a collection of log types.'''
-
-    TABLE = auto()
-    DAILY = auto()
-    MONTHLY = auto()
-class HEADER(StrEnum):
-
-    '''Represents a collection of headers.'''
-
-    YEARMONTH = "YearMonth"
-    DAYS = "Days"
-    COMMITS = "Commits"
-    DAILYAVGMIN = "DailyAvgMin"
-    REFNAMES = "RefNames"
-
 # STATIC CLASSES
-class _MessageCollectionAsciiBannerManager():
-
-    '''Collects all the messages used for logging and for the exceptions.'''
-
-    @staticmethod
-    def provided_version_empty_whitespace() -> str:
-        return "The provided 'version' is empty or whitespace."
-class _MessageCollectionCommitAverageCalculator():
-
-    '''Collects all the messages used for logging and for the exceptions used by CommitAverageCalculator.'''
-
-    @staticmethod
-    def not_enough_data() -> str:
-        return "Not enough data"
-    @staticmethod
-    def provided_log_type_not_supported(log_type : LOGTYPE) -> str:
-        return f"The provided 'log_type' is not supported ('{log_type}')."
-    @staticmethod
-    def field_equals_to(name: str, value: str) -> str:
-        return f"{name}:'{value}'"
-class _MessageCollection(
-    _MessageCollectionAsciiBannerManager,
-    _MessageCollectionCommitAverageCalculator):
-
-    '''Collects all the messages used for logging and for the exceptions.'''
-
-    pass
-
 # CLASSES
 @dataclass(frozen = True)
 class CommitItem():
@@ -103,86 +52,9 @@ class Summary():
     commit_items : list[CommitItem]
     daily_statuses : list[DailyStatus]
     monthly_statuses : list[MonthlyStatus]
-    daily_logging_function : Callable[[], None]
-    monthly_logging_function : Callable[[], None]    
-    table_logging_function : Callable[[], None]
-class AsciiBannerManager:
-
-    """
-        Creates the ASCII banner for the provided library's version.
-
-        The figlet can be generated using 
-            - 'http://www.network-science.de/ascii/' (font: "banner3-D", width: 120)
-            - 'https://www.askapache.com/online-tools/figlet-ascii/'.
-    """
-
-    def __validate(self, version: str) -> None:
-        
-        """Validates the provided 'version'."""
-
-        if not version or not version.strip():
-            raise ValueError(_MessageCollection.provided_version_empty_whitespace())
-    def __create_figlet(self) -> tuple:
-        
-        """Returns a tuple containing the figlet and its width."""
-        
-        lines : list[str] = [
-            "'##::: ##:'##:::::'##::'######:::::'###::::'##::::'##::'######:::",
-            " ###:: ##: ##:'##: ##:'##... ##:::'## ##::: ##:::: ##:'##... ##::",
-            " ####: ##: ##: ##: ##: ##:::..:::'##:. ##:: ##:::: ##: ##:::..:::",
-            " ## ## ##: ##: ##: ##: ##:::::::'##:::. ##: ##:::: ##: ##::'####:",
-            " ##. ####: ##: ##: ##: ##::::::: #########:. ##:: ##:: ##::: ##::",
-            " ##:. ###: ##: ##: ##: ##::: ##: ##.... ##::. ## ##::: ##::: ##::",
-            " ##::. ##:. ###. ###::. ######:: ##:::: ##:::. ###::::. ######:::",
-            "..::::..:::...::...::::......:::..:::::..:::::...::::::......::::"
-        ]
-
-        return (os.linesep.join(lines), len(lines[0]))
-    def __create_frame(self, version: str, max_length: int) -> tuple:
-        
-        """Returns a tuple containing the frame of the figlet."""
-        
-        version_token : str = f"Version: {version}"
-        
-        margin_length : int = 5
-        total_length : int = max_length - len(version_token) - margin_length
-
-        top_line : str = "*" * max_length
-        bottom_line : str = f"{top_line[:total_length]}{version_token}{'*' * margin_length}"
-
-        return (top_line, bottom_line)
-
-    def create(self, version: str) -> str:
-        
-        """Creates the formatted ASCII banner with a versioned frame."""
-        
-        self.__validate(version)
-
-        figlet, max_length = self.__create_figlet()
-        top_line, bottom_line = self.__create_frame(version, max_length)
-
-        ascii_banner : str = os.linesep.join([
-            top_line,
-            figlet,
-            bottom_line,
-            ""
-        ])
-
-        return ascii_banner
 class CommitAverageCalculator():
     
     '''Calculates custom averages related to the current git repository.'''
-
-    __ascii_banner_manager : AsciiBannerManager
-    __logging_function : Callable[[str], None]
-
-    def __init__(
-        self, 
-        ascii_banner_manager : AsciiBannerManager = AsciiBannerManager(),
-        logging_function : Callable[[str], None] = lambda msg : print(msg)) -> None:
-
-        self.__ascii_banner_manager = ascii_banner_manager
-        self.__logging_function = logging_function
 
     def __create_timestamp_dt(self, timestamp_int : int) -> datetime:
 
@@ -403,86 +275,7 @@ class CommitAverageCalculator():
             monthly_statuses.append(monthly_status)
 
         return monthly_statuses
-    def __log_table(self, monthly_statuses : list[MonthlyStatus]) -> None:
-
-        '''
-            Displays the MonthlyStatus objects as a table using the tabulate package.
-        
-            Example:
-                +-------------+--------+-----------+---------------+--------------------------------+
-                | YearMonth   |   Days |   Commits |   DailyAvgMin | RefNames                       |
-                +=============+========+===========+===============+================================+
-                | 2023-08     |      2 |         6 |        721.28 |  v3.2.0, v3.3.0                |
-                +-------------+--------+-----------+---------------+--------------------------------+
-                ...
-        '''
-
-        rows : list[list[object]] = []
-
-        for monthly_status in monthly_statuses:
-            row : list[object] = [
-                monthly_status.year_month,
-                monthly_status.dates,
-                len(monthly_status.timestamps),
-                str(f"{monthly_status.avg_minutes:.2f}"),
-                ", ".join(monthly_status.ref_names)
-            ]
-            row[3] = str(row[3]).replace("0.00", _MessageCollection.not_enough_data())
-            rows.append(row)
-
-        table : str = tabulate(
-            rows, 
-            headers = [HEADER.YEARMONTH, HEADER.DAYS, HEADER.COMMITS, HEADER.DAILYAVGMIN, HEADER.REFNAMES], 
-            tablefmt = "grid", 
-            disable_numparse = True
-        )
-
-        self.__logging_function(table)
-    def __log_items(self, items : list) -> None:
-
-        '''
-            Logs each item of the given list on its own line - i.e.:
-        
-                - DailyStatus(date_str='2025-05-19', timestamps=[1747679247, 1747679425, 1747679655, 1747680456], avg_minutes=6.72, ref_names=[])
-                - MonthlyStatus(year_month='2025-05', dates=1, timestamps=[1747679247, 1747679425, 1747679655, 1747680456], avg_minutes=6.72, ref_names=[])
-        '''
-
-        for item in items :
-            self.__logging_function(item)
-    def __log_ascii_banner(self):
-
-        """Logs the ascii banner."""
-
-        ascii_banner : str = self.__ascii_banner_manager.create(PROJECT_VERSION)
-
-        self.__logging_function("")
-        self.__logging_function(ascii_banner)    
-    def __log_folder_path(self, folder_path : Optional[str]):
-
-        """Logs the folder_path."""
-
-        if (folder_path):
-            self.__logging_function(_MessageCollection.field_equals_to("Folder", folder_path))
-        else:
-            self.__logging_function(_MessageCollection.field_equals_to("Folder", str(Path.cwd())))
-
-        self.__logging_function("")    
-    def __orchestrate_logging(self, summary : Summary, log_type : Optional[Literal[LOGTYPE.TABLE, LOGTYPE.DAILY, LOGTYPE.MONTHLY]]) -> None:
-
-        '''Orchestrate summary logging according to log_type.'''
-
-        if log_type is None or log_type== LOGTYPE.TABLE:
-            summary.table_logging_function()
-
-        elif log_type == LOGTYPE.DAILY:
-            summary.daily_logging_function()
-        
-        elif log_type == LOGTYPE.MONTHLY:
-            summary.monthly_logging_function()
-        
-        else:
-            raise Exception(_MessageCollection.provided_log_type_not_supported(log_type = log_type))
-
+    
     def run(self, folder_path: Optional[str] = None) -> Summary:
 
         '''Returns a Summary or raises an Exception.'''
@@ -492,39 +285,14 @@ class CommitAverageCalculator():
 
         daily_statuses : list[DailyStatus] = self.__create_daily_statuses(commit_items = commit_items)
         monthly_statuses : list[MonthlyStatus] = self.__create_monthly_statuses(daily_statuses = daily_statuses)
-
-        daily_logging_function : Callable[[], None] = lambda : self.__log_items(items = daily_statuses)
-        monthly_logging_function : Callable[[], None] = lambda : self.__log_items(items = monthly_statuses)
-        table_logging_function : Callable[[], None] = lambda : self.__log_table(monthly_statuses = monthly_statuses)  
-        
+       
         summary : Summary = Summary(
             commit_items = commit_items,
             daily_statuses = daily_statuses,
-            monthly_statuses = monthly_statuses,
-            daily_logging_function = daily_logging_function,
-            monthly_logging_function = monthly_logging_function,
-            table_logging_function = table_logging_function
+            monthly_statuses = monthly_statuses
         )
 
         return summary
-    def run_and_log(
-        self, 
-        folder_path: Optional[str] = None, 
-        log_type : Optional[Literal[LOGTYPE.TABLE, LOGTYPE.DAILY, LOGTYPE.MONTHLY]] = None) -> None:
-
-        '''Logs the outcome of the calculation or the Exception message.'''
-
-        try:
-
-            self.__log_ascii_banner()
-            self.__log_folder_path(folder_path)
-
-            summary : Summary = self.run(folder_path = folder_path)
-            self.__orchestrate_logging(summary = summary, log_type = log_type)
-
-        except Exception as e:
-
-            self.__logging_function(str(e))
 
 # MAIN
 if __name__ == "__main__":
