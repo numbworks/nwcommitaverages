@@ -385,6 +385,26 @@ class CLIManagerTestCase(unittest.TestCase):
 
             tabulate.assert_called_once()
             self.assertEqual(actual, expected)
+    def test_calculatetablemaxlenght_shouldreturnmaxlinecharactercount_wheninvoked(self) -> None:
+
+        # Arrange
+        table : str = (
+            "+-------------+--------+-----------+---------------+----------------+\n"
+            "| YearMonth   |   Days |   Commits |   DailyAvgMin | RefNames       |\n"
+            "+=============+========+===========+===============+================+\n"
+            "| 2023-08     |      2 |         6 |        721.28 | v3.2.0, v3.3.0 |\n"
+            "+-------------+--------+-----------+---------------+----------------+\n"
+            "| 2023-09     |      1 |         1 | Not enough data | v3.4.0       |\n"
+            "+-------------+--------+-----------+---------------+----------------+"
+        )
+        
+        expected : int = 69
+
+        # Act
+        actual : int = CLIManager()._CLIManager__calculate_table_max_lenght(table = table) # type: ignore
+
+        # Assert
+        self.assertEqual(actual, expected)
 
     @parameterized.expand([
         "/workspaces/nwsomething",
