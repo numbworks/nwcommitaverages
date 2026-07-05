@@ -366,10 +366,7 @@ class CLIManagerTestCase(unittest.TestCase):
             )
         ]
 
-    def test_converttotable_shouldreturntabulatedmonthlystatusesstring_wheninvoked(self) -> None:
-
-        # Arrange
-        expected : str = (
+        self.monthly_statuses_table : str = (
             "+-------------+--------+-----------+---------------+----------------+\n"
             "| YearMonth   |   Days |   Commits |   DailyAvgMin | RefNames       |\n"
             "+=============+========+===========+===============+================+\n"
@@ -379,37 +376,7 @@ class CLIManagerTestCase(unittest.TestCase):
             "+-------------+--------+-----------+---------------+----------------+"
         )
 
-        # Act, Assert
-        with patch("nwcommitaveragescli.tabulate", return_value = expected) as tabulate:
-            
-            actual : str = CLIManager()._CLIManager__convert_to_table(monthly_statuses = self.monthly_statuses) # type: ignore
-
-            tabulate.assert_called_once()
-            self.assertEqual(actual, expected)
-    def test_calculatetablemaxlenght_shouldreturnmaxlinecharactercount_wheninvoked(self) -> None:
-
-        # Arrange
-        table : str = (
-            "+-------------+--------+-----------+---------------+----------------+\n"
-            "| YearMonth   |   Days |   Commits |   DailyAvgMin | RefNames       |\n"
-            "+=============+========+===========+===============+================+\n"
-            "| 2023-08     |      2 |         6 |        721.28 | v3.2.0, v3.3.0 |\n"
-            "+-------------+--------+-----------+---------------+----------------+\n"
-            "| 2023-09     |      1 |         1 | Not enough data | v3.4.0       |\n"
-            "+-------------+--------+-----------+---------------+----------------+"
-        )
-        
-        expected : int = 69
-
-        # Act
-        actual : int = CLIManager()._CLIManager__calculate_table_max_lenght(table = table) # type: ignore
-
-        # Assert
-        self.assertEqual(actual, expected)
-    def test_converttoyaml_shouldreturnyamlstringwithwhitelines_wheninvoked(self) -> None:
-
-        # Arrange
-        expected : str = (
+        self.monthly_statuses_yaml : str = (
             "- YearMonth: 2023-08\n"
             "  Days: 2\n"
             "  Commits: 6\n"
@@ -423,13 +390,38 @@ class CLIManagerTestCase(unittest.TestCase):
             "  RefNames: v3.4.0\n"
         )
 
+    def test_converttotable_shouldreturnexpectedtablestring_wheninvoked(self) -> None:
+
+        # Arrange
         # Act, Assert
-        with patch("yaml.dump", return_value = expected.replace("\n\n-", "\n-")) as yaml_dump:
+        with patch("nwcommitaveragescli.tabulate", return_value = self.monthly_statuses_table) as tabulate:
+            
+            actual : str = CLIManager()._CLIManager__convert_to_table(monthly_statuses = self.monthly_statuses) # type: ignore
+
+            tabulate.assert_called_once()
+            self.assertEqual(actual, self.monthly_statuses_table)
+    def test_calculatetablemaxlenght_shouldreturnexpectedinteger_wheninvoked(self) -> None:
+
+        # Arrange
+        expected : int = 69
+
+        # Act
+        actual : int = CLIManager()._CLIManager__calculate_table_max_lenght(table = self.monthly_statuses_table) # type: ignore
+
+        # Assert
+        self.assertEqual(expected, actual)
+    def test_converttoyaml_shouldreturnexpectedyamlstring_wheninvoked(self) -> None:
+
+        # Arrange
+
+
+        # Act, Assert
+        with patch("yaml.dump", return_value = self.monthly_statuses_yaml.replace("\n\n-", "\n-")) as yaml_dump:
             
             actual : str = CLIManager()._CLIManager__convert_to_yaml(monthly_statuses = self.monthly_statuses) # type: ignore
 
             yaml_dump.assert_called_once()
-            self.assertEqual(actual, expected)
+            self.assertEqual(actual, self.monthly_statuses_yaml)
 
     @parameterized.expand([
         "/workspaces/nwsomething",
