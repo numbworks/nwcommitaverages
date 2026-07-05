@@ -15,7 +15,7 @@ v2.0.0
 	- Moved from a devcontainer to a named devcontainer, upgraded pip (24.3.1 -> 26.0.1), added timezone support.
 	- Added support for nwbuilders and nwmakefiles.
 - Documentation:
-	- Feature: covers all the features available in v1.1.0.
+	- Feature: covers all the features available in v2.0.0.
 
 v1.0.0
 - Application:
