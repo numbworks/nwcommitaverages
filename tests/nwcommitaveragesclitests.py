@@ -347,12 +347,9 @@ class APAdapterTestCase(unittest.TestCase):
         self.assertEqual(expected, actual)
 class CLIManagerTestCase(unittest.TestCase):
 
-    def test_logtable_shouldtabulatemonthlystatusesandlogtable_wheninvoked(self) -> None:
+    def test_converttotable_shouldreturntabulatedmonthlystatusesstring_wheninvoked(self) -> None:
 
         # Arrange
-        logs : list[str] = []
-        logging_function : Callable[[str], None] = lambda msg : logs.append(msg)
-
         monthly_statuses : list[MonthlyStatus] = [
             MonthlyStatus(
                 year_month = "2023-08",
@@ -376,18 +373,18 @@ class CLIManagerTestCase(unittest.TestCase):
             "+=============+========+===========+===============+================+\n"
             "| 2023-08     |      2 |         6 |        721.28 | v3.2.0, v3.3.0 |\n"
             "+-------------+--------+-----------+---------------+----------------+\n"
-            "| 2023-09     |      1 |         1 |   Not enough data | v3.4.0     |\n"
+            "| 2023-09     |      1 |         1 | Not enough data | v3.4.0         |\n"
             "+-------------+--------+-----------+---------------+----------------+"
         )
 
-        # Act, Assert
+        # Act & Assert
         with patch("nwcommitaveragescli.tabulate", return_value = expected) as tabulate:
             
-            cli_manager : CLIManager = CLIManager(logging_function = logging_function)
-            cli_manager._CLIManager__log_table(monthly_statuses = monthly_statuses) # type: ignore
+            cli_manager : CLIManager = CLIManager()
+            actual : str = cli_manager._CLIManager__convert_to_table(monthly_statuses = monthly_statuses) # type: ignore
 
             tabulate.assert_called_once()
-            self.assertEqual(logs[0], expected)
+            self.assertEqual(actual, expected)
 
     @parameterized.expand([
         "/workspaces/nwsomething",
@@ -400,6 +397,8 @@ class CLIManagerTestCase(unittest.TestCase):
         ap_adapter.parse_args.return_value = folder_path
 
         summary: Mock = Mock(spec = Summary)
+        summary.monthly_statuses = []
+        
         ca_calculator: Mock = Mock()
         ca_calculator.run.return_value = summary
 
@@ -411,17 +410,17 @@ class CLIManagerTestCase(unittest.TestCase):
         # Act, Assert
         with patch('nwcommitaveragescli.CLIManager._CLIManager__log_ascii_banner') as log_ascii_banner, \
              patch('nwcommitaveragescli.CLIManager._CLIManager__log_folder_path') as log_folder_path, \
-             patch('nwcommitaveragescli.CLIManager._CLIManager__orchestrate_logging') as orchestrate_logging:
+             patch('nwcommitaveragescli.CLIManager._CLIManager__log_monthly_statuses') as log_monthly_statuses:
             
             cli_manager.parse()
 
             log_ascii_banner.assert_called_once()
-            log_folder_path.assert_called_once_with(folder_path=folder_path)
+            log_folder_path.assert_called_once_with(folder_path = folder_path)
 
             ap_adapter.parse_args.assert_called_once()
-            ca_calculator.run.assert_called_once_with(folder_path=folder_path)
+            ca_calculator.run.assert_called_once_with(folder_path = folder_path)
 
-            # orchestrate_logging.assert_called_once_with(summary=summary, log_type=LOGTYPE.TABLE)
+            log_monthly_statuses.assert_called_once_with(monthly_statuses = summary.monthly_statuses)
 
     def test_parse_shouldlogexception_wheninvalidargument(self) -> None:
 

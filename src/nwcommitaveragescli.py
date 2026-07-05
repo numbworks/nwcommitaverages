@@ -421,7 +421,7 @@ class CLIManager():
             self.__log_folder_path(folder_path = folder_path)
 
             summary : Summary = self.__ca_calculator.run(folder_path = folder_path)
-            self.__log_monthly_statuses(summary.monthly_statuses);
+            self.__log_monthly_statuses(monthly_statuses = summary.monthly_statuses);
 
         except Exception as e:
 
