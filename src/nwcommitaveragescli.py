@@ -6,14 +6,15 @@ Alias: nwcavg
 
 # GLOBAL MODULES
 import os
-from pathlib import Path
 import subprocess
+import yaml
+from pathlib import Path
 from argparse import ArgumentParser, Namespace
-from enum import StrEnum, auto
+from enum import StrEnum
 from shutil import get_terminal_size
 from subprocess import CompletedProcess
 from tabulate import tabulate
-from typing import Callable, Final, Literal, Optional
+from typing import Callable, Final, Optional
 
 # NW/LOCAL MODULES
 from nwcommitaverages import CommitAverageCalculator, MonthlyStatus, Summary
@@ -28,13 +29,6 @@ class CLISTRING:
     OPTION_FOLDERPATH_FLAGS : Final[list[str]] = ["--folder_path"]
     OPTION_FOLDERPATH_REQUIRED : Final[bool] = False
     OPTION_FOLDERPATH_HELP : Final[str] = "The path to the Git repository folder for which the average commit value is calculated."
-class LOGTYPE(StrEnum):
-
-    '''Represents a collection of log types.'''
-
-    TABLE = auto()
-    DAILY = auto()
-    MONTHLY = auto()
 class HEADER(StrEnum):
 
     '''Represents a collection of headers.'''
@@ -46,19 +40,6 @@ class HEADER(StrEnum):
     REFNAMES = "RefNames"
 
 # STATIC CLASSES
-class _MessageCollectionCommitAverageCalculator():
-
-    '''Collects all the messages used for logging and for the exceptions used by CommitAverageCalculator.'''
-
-    @staticmethod
-    def not_enough_data() -> str:
-        return "Not enough data"
-    @staticmethod
-    def provided_log_type_not_supported(log_type : LOGTYPE) -> str:
-        return f"The provided 'log_type' is not supported ('{log_type}')."
-    @staticmethod
-    def field_equals_to(name: str, value: str) -> str:
-        return f"{name}:'{value}'"
 class _MessageCollectionAsciiBannerManager():
 
     '''Collects all the messages used for logging and for the exceptions.'''
@@ -66,9 +47,19 @@ class _MessageCollectionAsciiBannerManager():
     @staticmethod
     def provided_version_empty_whitespace() -> str:
         return "The provided 'version' is empty or whitespace."
+class _MessageCollectionCLIManager():
+
+    '''Collects all the messages used for logging and for the exceptions used by CLIManager.'''
+
+    @staticmethod
+    def not_enough_data() -> str:
+        return "Not enough data"
+    @staticmethod
+    def field_equals_to(name: str, value: str) -> str:
+        return f"{name}:'{value}'"
 class _MessageCollection(
-    _MessageCollectionAsciiBannerManager,
-    _MessageCollectionCommitAverageCalculator):
+    _MessageCollectionCLIManager,
+    _MessageCollectionAsciiBannerManager):
 
     '''Collects all the messages used for logging and for the exceptions.'''
 
@@ -304,19 +295,10 @@ class CLIManager():
         self.__tw_manager = tw_manager
         self.__logging_function = logging_function
 
-    def __log_ascii_banner(self):
-
-        """Logs the ascii banner."""
-
-        terminal_width : int = self.__tw_manager.get_or_cutoff()
-        ascii_banner : str = self.__ascii_banner_manager.create(PROJECT_VERSION, terminal_width)
-
-        self.__logging_function("")
-        self.__logging_function(ascii_banner)
-    def __log_table(self, monthly_statuses : list[MonthlyStatus]) -> None:
+    def __convert_to_table(self, monthly_statuses : list[MonthlyStatus]) -> str:
 
         '''
-            Displays the MonthlyStatus objects as a table using the tabulate package.
+            Converts monthly_statuses to a table.
         
             Example:
                 +-------------+--------+-----------+---------------+--------------------------------+
@@ -347,18 +329,58 @@ class CLIManager():
             disable_numparse = True
         )
 
-        self.__logging_function(table)
-    def __log_items(self, items : list) -> None:
+        return table
+    def __calculate_table_max_lenght(self, table : str) -> int:
 
-        '''
-            Logs each item of the given list on its own line - i.e.:
+        """Calculates table's max lenght."""
+
+        max_length : int = max((len(line) for line in table.splitlines()), default=0)
+
+        return max_length
+    def __convert_to_yaml(self, monthly_statuses : list[MonthlyStatus]) -> str:
         
-                - DailyStatus(date_str='2025-05-19', timestamps=[1747679247, 1747679425, 1747679655, 1747680456], avg_minutes=6.72, ref_names=[])
-                - MonthlyStatus(year_month='2025-05', dates=1, timestamps=[1747679247, 1747679425, 1747679655, 1747680456], avg_minutes=6.72, ref_names=[])
         '''
+            Converts monthly_statuses to a YAML block.
+        
+            Example:
+                - YearMonth: "2023-08"
+                  Days: 2
+                  Commits: 6
+                  DailyAvgMin: 721.28
+                  RefNames: "v3.2.0, v3.3.0"
+                - ...
 
-        for item in items :
-            self.__logging_function(item)    
+            Note: "sort_keys = False" preserves the insertion order of the headers.
+        '''
+       
+        yaml_data : list[dict[str, object]] = []
+
+        for monthly_status in monthly_statuses:
+            avg_min = str(f"{monthly_status.avg_minutes:.2f}").replace("0.00", _MessageCollection.not_enough_data())
+            
+            record : dict[str, object] = {
+                HEADER.YEARMONTH.value: monthly_status.year_month,
+                HEADER.DAYS.value: monthly_status.dates,
+                HEADER.COMMITS.value: len(monthly_status.timestamps),
+                HEADER.DAILYAVGMIN.value: float(avg_min) if avg_min.replace('.', '', 1).isdigit() else avg_min,
+                HEADER.REFNAMES.value: ", ".join(monthly_status.ref_names)
+            }
+            yaml_data.append(record)
+
+        yaml_str : str = yaml.dump(yaml_data, sort_keys = False, default_flow_style = False)
+        yaml_str = yaml_str.replace(f"\n- {HEADER.YEARMONTH.value}:", f"\n\n- {HEADER.YEARMONTH.value}:")
+
+        return yaml_str
+    
+    def __log_ascii_banner(self):
+
+        """Logs the ascii banner."""
+
+        terminal_width : int = self.__tw_manager.get_or_cutoff()
+        ascii_banner : str = self.__ascii_banner_manager.create(PROJECT_VERSION, terminal_width)
+
+        self.__logging_function("")
+        self.__logging_function(ascii_banner)
     def __log_folder_path(self, folder_path : Optional[str]):
 
         """Logs the folder_path."""
@@ -368,23 +390,24 @@ class CLIManager():
         else:
             self.__logging_function(_MessageCollection.field_equals_to("Folder", str(Path.cwd())))
 
-        self.__logging_function("")    
-    def __orchestrate_logging(self, summary : Summary, log_type : Optional[Literal[LOGTYPE.TABLE, LOGTYPE.DAILY, LOGTYPE.MONTHLY]]) -> None:
+        self.__logging_function("")     
+    def __log_monthly_statuses(self, monthly_statuses : list[MonthlyStatus]) -> None:
 
-        '''Orchestrate summary logging according to log_type.'''
+        '''
+            Logs monthly_statuses as table or YAML.
+        '''
 
-        if log_type is None or log_type== LOGTYPE.TABLE:
-            self.__log_table(monthly_statuses = summary.monthly_statuses)
+        terminal_width : int = self.__tw_manager.get_or_cutoff()
 
-        elif log_type == LOGTYPE.DAILY:
-            self.__log_items(items = summary.daily_statuses)
-        
-        elif log_type == LOGTYPE.MONTHLY:
-            self.__log_items(items = summary.monthly_statuses)
-        
+        table : str = self.__convert_to_table(monthly_statuses)
+        table_max_length : int = self.__calculate_table_max_lenght(table)
+
+        if table_max_length < terminal_width:
+            self.__logging_function(table)
         else:
-            raise Exception(_MessageCollection.provided_log_type_not_supported(log_type = log_type))
-    
+            yaml_str : str = self.__convert_to_yaml(monthly_statuses)
+            self.__logging_function(yaml_str)  
+   
     def parse(self) -> None:
 
         '''Calculates the average commit value and logs the result.'''
@@ -394,12 +417,11 @@ class CLIManager():
             self.__log_ascii_banner()
 
             folder_path : Optional[str] = self.__ap_adapter.parse_args()
-            log_type : Optional[Literal[LOGTYPE.TABLE, LOGTYPE.DAILY, LOGTYPE.MONTHLY]] = LOGTYPE.TABLE
 
             self.__log_folder_path(folder_path = folder_path)
 
             summary : Summary = self.__ca_calculator.run(folder_path = folder_path)
-            self.__orchestrate_logging(summary = summary, log_type = log_type)
+            self.__log_monthly_statuses(summary.monthly_statuses);
 
         except Exception as e:
 

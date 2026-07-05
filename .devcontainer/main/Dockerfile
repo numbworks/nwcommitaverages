@@ -2,6 +2,7 @@ FROM python:3.12.5-bookworm
 
 # MODULE DEPENDENCIES
 RUN pip install tabulate==0.9.0
+RUN pip install pyyaml==6.0.3
 
 # JUPYTER NOTEBOOK
 

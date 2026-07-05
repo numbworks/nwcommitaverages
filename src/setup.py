@@ -14,7 +14,8 @@ if __name__ == "__main__":
         url = PROJECT_URL,
         py_modules = [ LIBRARY_NAME, CLI_NAME, "setupinfo" ],
         install_requires = [ 
-			"tabulate>=0.9.0"
+			"tabulate>=0.9.0",
+            "pyyaml>=6.0.3"
 		],
         python_requires = ">=3.12",
         license = "MIT",

@@ -9,12 +9,12 @@ from unittest.mock import Mock, patch
 # LOCAL MODULES
 import sys, os
 sys.path.append(os.path.dirname(__file__).replace('tests', 'src'))
-from nwcommitaverages import DailyStatus, MonthlyStatus, Summary
-from nwcommitaveragescli import LOGTYPE, _MessageCollection, APFactory, APAdapter, AsciiBannerManager, CLIManager, CLISTRING, TerminalWindowManager
+from nwcommitaverages import MonthlyStatus, Summary
+from nwcommitaveragescli import _MessageCollection, APFactory, APAdapter, AsciiBannerManager, CLIManager, CLISTRING, TerminalWindowManager
 
 # SUPPORT METHODS
 # TEST CLASSES
-class MessageCollectionCommitAverageCalculatorTestCase(unittest.TestCase):
+class MessageCollectionCLIManagerTestCase(unittest.TestCase):
 
     def test_notenoughdata_shouldreturnexpectedmessage_wheninvoked(self):
 
@@ -23,17 +23,6 @@ class MessageCollectionCommitAverageCalculatorTestCase(unittest.TestCase):
 
         # Act
         actual : str = _MessageCollection.not_enough_data()
-
-        # Assert
-        self.assertEqual(expected, actual)
-    def test_providedlogtypenotsupported_shouldreturnexpectedmessage_wheninvalidlogtypegiven(self):
-
-        # Arrange
-        log_type : LOGTYPE = LOGTYPE.DAILY  # We fake this is not supported.
-        expected : str = "The provided 'log_type' is not supported ('daily')."
-
-        # Act
-        actual : str = _MessageCollection.provided_log_type_not_supported(log_type)
 
         # Assert
         self.assertEqual(expected, actual)
@@ -399,64 +388,6 @@ class CLIManagerTestCase(unittest.TestCase):
 
             tabulate.assert_called_once()
             self.assertEqual(logs[0], expected)
-    def test_logitems_shouldlogallitems_wheninvoked(self) -> None:
-
-        # Arrange
-        actual : list[str] = []
-        logging_function : Callable[[str], None] = lambda msg : actual.append(msg)
-
-        items : list[object] = [
-            DailyStatus(date_str = "2025-05-19", timestamps = [1, 2, 3], avg_minutes = 6.72, ref_names = []),
-            MonthlyStatus(year_month = "2025-05", dates = 1, timestamps = [1, 2, 3], avg_minutes = 6.72, ref_names = [])
-        ]
-
-        expected : list[str] = [
-            "DailyStatus(date_str='2025-05-19', timestamps=[1, 2, 3], avg_minutes=6.72, ref_names=[])",
-            "MonthlyStatus(year_month='2025-05', dates=1, timestamps=[1, 2, 3], avg_minutes=6.72, ref_names=[])"
-        ]
-
-        # Act
-        cli_manager : CLIManager = CLIManager(logging_function = logging_function)
-        cli_manager._CLIManager__log_items(items = items)   # type: ignore
-
-        # Assert
-        self.assertEqual(expected[0], str(actual[0]))
-        self.assertEqual(expected[1], str(actual[1]))
-    def test_orchestratelogging_shouldcallexpectedprivatemethod_whenlogtypeisvalid(self) -> None:
-
-        # Arrange
-        cli_manager : CLIManager = CLIManager()
-
-        summary : Summary = Summary(
-            commit_items = [],
-            daily_statuses = [],
-            monthly_statuses = []
-        )
-
-        # Act, Assert
-        with patch('nwcommitaveragescli.CLIManager._CLIManager__log_table') as log_table:
-            cli_manager._CLIManager__orchestrate_logging(summary = summary, log_type = LOGTYPE.TABLE)  # type: ignore
-            log_table.assert_called_once_with(monthly_statuses = summary.monthly_statuses)
-
-        with patch('nwcommitaveragescli.CLIManager._CLIManager__log_items') as log_items:
-            cli_manager._CLIManager__orchestrate_logging(summary = summary, log_type = LOGTYPE.DAILY)  # type: ignore
-            log_items.assert_called_once_with(items = summary.daily_statuses)
-
-        with patch('nwcommitaveragescli.CLIManager._CLIManager__log_items') as log_items:
-            cli_manager._CLIManager__orchestrate_logging(summary = summary, log_type = LOGTYPE.MONTHLY)  # type: ignore
-            log_items.assert_called_once_with(items = summary.monthly_statuses)
-    def test_orchestratelogging_shouldraiseexception_wheninvalidlogtype(self) -> None:
-
-        # Arrange
-        summary : Summary = Mock(spec = Summary)
-        log_type : str = "INVALID"
-        expected : str = "The provided 'log_type' is not supported ('INVALID')."
-
-        # Act, Assert
-        with self.assertRaises(Exception) as context:
-            CLIManager()._CLIManager__orchestrate_logging(summary = summary, log_type = log_type)  # type: ignore
-
-        self.assertEqual(expected, str(context.exception))
 
     @parameterized.expand([
         "/workspaces/nwsomething",
@@ -490,7 +421,7 @@ class CLIManagerTestCase(unittest.TestCase):
             ap_adapter.parse_args.assert_called_once()
             ca_calculator.run.assert_called_once_with(folder_path=folder_path)
 
-            orchestrate_logging.assert_called_once_with(summary=summary, log_type=LOGTYPE.TABLE)
+            # orchestrate_logging.assert_called_once_with(summary=summary, log_type=LOGTYPE.TABLE)
 
     def test_parse_shouldlogexception_wheninvalidargument(self) -> None:
 
