@@ -5,8 +5,11 @@ Alias: nwcavg
 '''
 
 # GLOBAL MODULES
+import subprocess
 from argparse import ArgumentParser, Namespace
-from typing import Final, Optional, Tuple
+from shutil import get_terminal_size
+from subprocess import CompletedProcess
+from typing import Callable, Final, Optional, Tuple
 
 # LOCAL/NW MODULES
 from nwcommitaverages import CommitAverageCalculator
@@ -29,6 +32,79 @@ class _MessageCollection():
     pass    
 
 # CLASSES
+class TerminalWindowManager:
+
+    '''Handles terminal window size.'''
+
+    __shutil_width_function : Callable[[], Optional[int]]
+    __stty_width_function : Callable[[], Optional[int]]
+
+    cutoff_width : Final[int] = 70
+
+    @staticmethod
+    def default_shutil_width_function() -> Optional[int]:
+
+        """Get terminal width using shutil (multi-platform)."""
+
+        try:
+
+            terminal_width : int = get_terminal_size().columns
+
+            return terminal_width
+        
+        except:
+            return None
+
+    @staticmethod
+    def default_stty_width_function() -> Optional[int]:
+
+        """Get terminal width using stty command (Linux)."""
+
+        try:
+
+            process : CompletedProcess[str] = subprocess.run(
+                ["/bin/sh", "-c", "stty size | cut -d' ' -f2"],
+                capture_output = True,
+                text = True,
+                check = False,
+            )
+
+            stty_output : str = process.stdout.strip()
+            terminal_width : int = int(stty_output)
+
+            if terminal_width >= 0:
+                return terminal_width
+
+            return None
+        except:
+            return None
+
+    def __init__(
+        self,
+        shutil_width_function : Optional[Callable[[], Optional[int]]] = None,
+        stty_width_function : Optional[Callable[[], Optional[int]]] = None,
+    ) -> None:
+        
+        if shutil_width_function is None:
+            shutil_width_function = self.default_shutil_width_function
+        
+        if stty_width_function is None:
+            stty_width_function = self.default_stty_width_function
+
+        self.__shutil_width_function = shutil_width_function
+        self.__stty_width_function = stty_width_function
+
+    def get_or_cutoff(self) -> int:
+
+        terminal_width : Optional[int] = self.__shutil_width_function()
+
+        if terminal_width is None:
+            terminal_width = self.__stty_width_function()
+
+        if terminal_width is None:
+            terminal_width = self.cutoff_width
+
+        return terminal_width
 class APFactory():
 
     '''Encapsulates all the logic related to the creation of a custom instance of argparse.ArgumentParser.'''
@@ -68,14 +144,17 @@ class CLIManager():
 
     __ap_adapter : APAdapter
     __ca_calculator : CommitAverageCalculator
+    __tw_manager : TerminalWindowManager
 
     def __init__(
         self, 
         ap_adapter : APAdapter = APAdapter(), 
-        ca_calculator : CommitAverageCalculator = CommitAverageCalculator()) -> None:
+        ca_calculator : CommitAverageCalculator = CommitAverageCalculator(),
+        tw_manager : TerminalWindowManager = TerminalWindowManager()) -> None:
         
         self.__ap_adapter = ap_adapter
         self.__ca_calculator = ca_calculator
+        self.__tw_manager = tw_manager
 
     def run_and_log(self) -> None:
 
