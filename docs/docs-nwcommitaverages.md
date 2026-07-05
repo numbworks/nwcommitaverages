@@ -34,6 +34,12 @@ To learn more about the "framework freeze" strategy adopted by this project, ple
 
 - [docs-frameworkfreeze-python.md](SeeAlso-frameworkfreeze/docs-frameworkfreeze-python.md)
 
+## See Also: `knownissues`
+
+To learn more about some known issues that might have required a workaround to make this project work, please have a look at the following document:
+
+- [docs-knownissues-python.md](SeeAlso-knownissues/docs-knownissues-python.md)
+
 ## See Also: `nwbuilders`
 
 This project includes portions of the `nwbuilders` project, which is documented here:
