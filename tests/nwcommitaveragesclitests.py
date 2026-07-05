@@ -347,10 +347,9 @@ class APAdapterTestCase(unittest.TestCase):
         self.assertEqual(expected, actual)
 class CLIManagerTestCase(unittest.TestCase):
 
-    def test_converttotable_shouldreturntabulatedmonthlystatusesstring_wheninvoked(self) -> None:
+    def setUp(self):
 
-        # Arrange
-        monthly_statuses : list[MonthlyStatus] = [
+        self.monthly_statuses : list[MonthlyStatus] = [
             MonthlyStatus(
                 year_month = "2023-08",
                 dates = 2,
@@ -367,21 +366,23 @@ class CLIManagerTestCase(unittest.TestCase):
             )
         ]
 
+    def test_converttotable_shouldreturntabulatedmonthlystatusesstring_wheninvoked(self) -> None:
+
+        # Arrange
         expected : str = (
             "+-------------+--------+-----------+---------------+----------------+\n"
             "| YearMonth   |   Days |   Commits |   DailyAvgMin | RefNames       |\n"
             "+=============+========+===========+===============+================+\n"
             "| 2023-08     |      2 |         6 |        721.28 | v3.2.0, v3.3.0 |\n"
             "+-------------+--------+-----------+---------------+----------------+\n"
-            "| 2023-09     |      1 |         1 | Not enough data | v3.4.0         |\n"
+            "| 2023-09     |      1 |         1 | Not enough data | v3.4.0       |\n"
             "+-------------+--------+-----------+---------------+----------------+"
         )
 
-        # Act & Assert
+        # Act, Assert
         with patch("nwcommitaveragescli.tabulate", return_value = expected) as tabulate:
             
-            cli_manager : CLIManager = CLIManager()
-            actual : str = cli_manager._CLIManager__convert_to_table(monthly_statuses = monthly_statuses) # type: ignore
+            actual : str = CLIManager()._CLIManager__convert_to_table(monthly_statuses = self.monthly_statuses) # type: ignore
 
             tabulate.assert_called_once()
             self.assertEqual(actual, expected)
@@ -405,6 +406,30 @@ class CLIManagerTestCase(unittest.TestCase):
 
         # Assert
         self.assertEqual(actual, expected)
+    def test_converttoyaml_shouldreturnyamlstringwithwhitelines_wheninvoked(self) -> None:
+
+        # Arrange
+        expected : str = (
+            "- YearMonth: 2023-08\n"
+            "  Days: 2\n"
+            "  Commits: 6\n"
+            "  DailyAvgMin: 721.28\n"
+            "  RefNames: v3.2.0, v3.3.0\n"
+            "\n"
+            "- YearMonth: 2023-09\n"
+            "  Days: 1\n"
+            "  Commits: 1\n"
+            "  DailyAvgMin: Not enough data\n"
+            "  RefNames: v3.4.0\n"
+        )
+
+        # Act, Assert
+        with patch("yaml.dump", return_value = expected.replace("\n\n-", "\n-")) as yaml_dump:
+            
+            actual : str = CLIManager()._CLIManager__convert_to_yaml(monthly_statuses = self.monthly_statuses) # type: ignore
+
+            yaml_dump.assert_called_once()
+            self.assertEqual(actual, expected)
 
     @parameterized.expand([
         "/workspaces/nwsomething",
