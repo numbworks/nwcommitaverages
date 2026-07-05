@@ -423,6 +423,57 @@ class CLIManagerTestCase(unittest.TestCase):
             yaml_dump.assert_called_once()
             self.assertEqual(actual, self.monthly_statuses_yaml)
 
+    def test_logmonthlystatuses_shouldcalltablemethods_whentablewidthislessthanterminalwidth(self) -> None:
+
+        # Arrange
+        logging_function : Mock = Mock()
+        monthly_statuses : list[MonthlyStatus] = []
+
+        table : str = "some table"
+        terminal_width : int = 80
+        table_max_length : int = 50
+
+        # Act, Assert
+        with patch("nwcommitaveragescli.TerminalWindowManager.get_or_cutoff", return_value = terminal_width) as get_or_cutoff, \
+             patch.object(CLIManager, "_CLIManager__convert_to_table", return_value = table) as convert_to_table, \
+             patch.object(CLIManager, "_CLIManager__calculate_table_max_lenght", return_value = table_max_length) as calculate_table_max_lenght, \
+             patch.object(CLIManager, "_CLIManager__convert_to_yaml") as convert_to_yaml:
+
+                cli_manager : CLIManager = CLIManager(logging_function = logging_function)
+                cli_manager._CLIManager__log_monthly_statuses(monthly_statuses = monthly_statuses) # type: ignore
+
+                get_or_cutoff.assert_called_once()
+                convert_to_table.assert_called_once_with(monthly_statuses)
+                calculate_table_max_lenght.assert_called_once_with(table)
+                logging_function.assert_called_once_with(table)
+                
+                convert_to_yaml.assert_not_called()
+    def test_logmonthlystatuses_shouldcallyamlmethods_whentablewidthisgreaterthanorequaltoterminalwidth(self) -> None:
+
+        # Arrange
+        logging_function : Mock = Mock()
+        monthly_statuses : list[MonthlyStatus] = []
+
+        table : str = "some table"
+        yaml_str : str = "some yaml"
+        terminal_width : int = 40
+        table_max_length : int = 50
+
+        # Act, Assert
+        with patch("nwcommitaveragescli.TerminalWindowManager.get_or_cutoff", return_value = terminal_width) as get_or_cutoff, \
+             patch.object(CLIManager, "_CLIManager__convert_to_table", return_value = table) as convert_to_table, \
+             patch.object(CLIManager, "_CLIManager__calculate_table_max_lenght", return_value = table_max_length) as calculate_table_max_lenght, \
+             patch.object(CLIManager, "_CLIManager__convert_to_yaml", return_value = yaml_str) as convert_to_yaml:
+
+                cli_manager : CLIManager = CLIManager(logging_function = logging_function)
+                cli_manager._CLIManager__log_monthly_statuses(monthly_statuses = monthly_statuses) # type: ignore
+
+                get_or_cutoff.assert_called_once()
+                convert_to_table.assert_called_once_with(monthly_statuses)
+                calculate_table_max_lenght.assert_called_once_with(table)
+                convert_to_yaml.assert_called_once_with(monthly_statuses)
+                logging_function.assert_called_once_with(yaml_str)
+
     @parameterized.expand([
         "/workspaces/nwsomething",
         None
