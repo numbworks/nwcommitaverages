@@ -2,7 +2,7 @@
 
 # --- CONFIGURATION ---
 PROJECT_NAME="nwcommitaverages"
-PROJECT_VERSION="2.0.0"
+PROJECT_VERSION="2.0.1"
 PROJECT_ALIAS="nwcavg"
 CLI_NAME="nwcommitaveragescli"
 
