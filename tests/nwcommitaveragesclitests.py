@@ -9,7 +9,7 @@ from unittest.mock import Mock, patch
 # LOCAL MODULES
 import sys, os
 sys.path.append(os.path.dirname(__file__).replace('tests', 'src'))
-from nwcommitaverages import CommitAverageCalculator, DailyStatus, MonthlyStatus, Summary
+from nwcommitaverages import DailyStatus, MonthlyStatus, Summary
 from nwcommitaveragescli import LOGTYPE, _MessageCollection, APFactory, APAdapter, AsciiBannerManager, CLIManager, CLISTRING, TerminalWindowManager
 
 # SUPPORT METHODS
@@ -457,6 +457,62 @@ class CLIManagerTestCase(unittest.TestCase):
             CLIManager()._CLIManager__orchestrate_logging(summary = summary, log_type = log_type)  # type: ignore
 
         self.assertEqual(expected, str(context.exception))
+
+    @parameterized.expand([
+        "/workspaces/nwsomething",
+        None
+    ])
+    def test_parse_shouldcallexpectedprivatemethods_wheninvoked(self, folder_path: Optional[str]) -> None:
+
+        # Arrange
+        ap_adapter: Mock = Mock()
+        ap_adapter.parse_args.return_value = folder_path
+
+        summary: Mock = Mock(spec = Summary)
+        ca_calculator: Mock = Mock()
+        ca_calculator.run.return_value = summary
+
+        cli_manager = CLIManager(
+            ap_adapter = ap_adapter,
+            ca_calculator = ca_calculator
+        )
+
+        # Act, Assert
+        with patch('nwcommitaveragescli.CLIManager._CLIManager__log_ascii_banner') as log_ascii_banner, \
+             patch('nwcommitaveragescli.CLIManager._CLIManager__log_folder_path') as log_folder_path, \
+             patch('nwcommitaveragescli.CLIManager._CLIManager__orchestrate_logging') as orchestrate_logging:
+            
+            cli_manager.parse()
+
+            log_ascii_banner.assert_called_once()
+            log_folder_path.assert_called_once_with(folder_path=folder_path)
+
+            ap_adapter.parse_args.assert_called_once()
+            ca_calculator.run.assert_called_once_with(folder_path=folder_path)
+
+            orchestrate_logging.assert_called_once_with(summary=summary, log_type=LOGTYPE.TABLE)
+
+    def test_parse_shouldlogexception_wheninvalidargument(self) -> None:
+
+        # Arrange
+        expected : str = "Something went wrong during parsing or calculation."
+        
+        ap_adapter : Mock = Mock()
+        ap_adapter.parse_args.side_effect = Exception(expected)
+        
+        logs : list[str] = []
+        logging_function : Callable[[str], None] = lambda msg : logs.append(msg)
+
+        cli_manager = CLIManager(
+            ap_adapter = ap_adapter,
+            logging_function = logging_function
+        )
+
+        # Act,          
+        cli_manager.parse()
+
+        # Assert
+        self.assertEqual(logs[2], expected)
 
 # MAIN
 if __name__ == "__main__":
